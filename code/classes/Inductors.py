@@ -11,7 +11,7 @@ class Inductors:
         self.from_node = from_node
         self.to_node = to_node
         self.l = l
-        self.I = 0
+        
         # You are welcome to / may be required to add additional class variables   
 
     # Some suggested functions to implement, 
@@ -36,9 +36,6 @@ class Inductors:
         
         #return the current number of nodes
         return(count_idx)
-        
-        
-        pass
         
     def stamp_sparse(self,):
         pass
@@ -68,11 +65,12 @@ class Inductors:
             
         # stamp the current source
         if (self.to_node != "gnd"):
-            I = self.I + self.g * (results_t[self.intermediate_node_idx]-results_t[self.to_node_idx])
+            I = results_t[self.vs_constraint_node_idx] + self.g * (results_t[self.intermediate_node_idx]-results_t[self.to_node_idx])
             J[self.to_node_idx] += I
         else:
-            I = self.I + self.g * (results_t[self.intermediate_node_idx])
-        J[self.intermediate_node_idx] += -I
+            I = results_t[self.vs_constraint_node_idx] + self.g*(results_t[self.from_node_idx])
+            J[self.intermediate_node_idx] += -I
+        
         
 
     def stamp_short(self,):

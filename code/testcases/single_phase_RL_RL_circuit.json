@@ -9,6 +9,10 @@
             "phase": "A"
         },
         {
+            "name": "n3_a",
+            "phase": "A"
+        },
+        {
             "name": "gnd",
             "phase": "N"
         }
@@ -22,14 +26,20 @@
         }
     ],
     "capacitors": [
+    ],
+    "inductors": [
         {
             "name": "l1",
             "from_node": "n2_a",
+            "to_node": "n3_a",
+            "l": 5e-3
+        }   ,
+        {
+            "name": "l1",
+            "from_node": "n3_a",
             "to_node": "gnd",
-            "c": 2e-3
-        }        
-    ],
-    "inductors": [
+            "l": 5e-3
+        }         
     ],
     "switches": [
     ],
@@ -39,7 +49,7 @@
             "vp_node": "n1_a",
             "vn_node": "gnd",
             "amp_ph_ph_rms": 20,
-            "phase_deg": 90,
+            "phase_deg": 45,
             "frequency_hz": 60
         }
     ],

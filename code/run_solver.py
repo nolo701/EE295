@@ -1,8 +1,10 @@
 from scripts.solve import solve
 
 # path to the grid network RAW file
-#casename = 'testcases/single_phase_R_circuit.json'
-casename = 'testcases/single_phase_RL_circuit.json'
+#casename = 'testcases/single_phase_RC_circuit.json'
+#casename = 'testcases/single_phase_RL_circuit.json'
+casename = 'testcases/single_phase_RL_RL_circuit.json'
+#casename = 'testcases/RL_circuit.json'
 
 # the settings for the solver
 settings = {
@@ -10,7 +12,9 @@ settings = {
 	"Max Iters": 5, # Maximum number of newton iterations for non-linear loop at given time step
     "Simulation Time": 0.2, # Total time to simulate: [0, tf]
     "Sparse": False, # Use sparse matrix formulation
-    "Time Step": 1E-3
+    "Time Step": 1E-4
+    
+    
 }
 
 # run the solver

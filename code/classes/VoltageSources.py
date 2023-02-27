@@ -29,7 +29,8 @@ class VoltageSources:
 
     def stamp_dense(self,Y, J, t):
         # solve for the voltage value for t
-        V_t = self.amp_ph_ph_rms*np.sqrt(2/3)*np.cos(2*np.pi*self.frequency_hz*t + np.deg2rad(self.phase_deg))
+        V_t = self.amp_ph_ph_rms*np.sqrt(2/3)*np.sin(2*np.pi*self.frequency_hz*t - np.deg2rad(self.phase_deg))
+        #V_t = self.amp_ph_ph_rms*np.sqrt(2/3)*np.cos(2*np.pi*self.frequency_hz*t +(self.phase_deg))
         Y[self.vs_idx, self.vp_node_idx] += 1
         if self.vn_node != "gnd":
             Y[self.vs_idx, self.vn_node_idx] += -1

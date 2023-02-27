@@ -49,6 +49,8 @@ def solve(TESTCASE, SETTINGS):
     node_dict={}
     size_Y = assign_node_indexes(devices,node_dict)
     inv_node_dict=dict(map(reversed, node_dict.items()))
+    print("Node Dict: ")
+    print(node_dict)
  
     # # # Initialize solution vector # # #
     # TODO: STEP 1 - Complete the function to find your state vector at time t=0.
@@ -60,6 +62,8 @@ def solve(TESTCASE, SETTINGS):
     # TODO: STEP 2 - Run the time domain simulation and return an array that contains
     #                time domain waveforms of all the state variables # # #
     V_waveform = run_time_domain_simulation(devices, V_init, size_Y, SETTINGS)
+    #V_waveform = run_time_domain_simulation(devices, size_Y, SETTINGS)
+    # print(V_waveform[:,1])
 
     # # # Process Results # # #
     # TODO: PART 1, STEP 3 - Write a process results function to compute the relevant results (voltage and current
