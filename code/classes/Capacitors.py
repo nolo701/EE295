@@ -61,20 +61,7 @@ class Capacitors:
         elif self.to_node != "gnd":
             V_t = (results_t[self.from_node_idx] - results_t[self.to_node_idx])+ self.r*results_t[self.vs_constraint_node_idx]
         #V_t = self.amp_ph_ph_rms*np.sqrt(2/3)*np.cos(2*np.pi*self.frequency_hz*t +(self.phase_deg))
-        Y[self.vs_constraint_node_idx, self.intermediate_node_idx] += 1
-        if self.to_node != "gnd":
-            Y[self.vs_constraint_node_idx, self.to_node_idx] += -1
         J[self.vs_constraint_node_idx] += V_t
-        Y[self.intermediate_node_idx, self.vs_constraint_node_idx] += 1
-        if self.to_node != "gnd":
-            Y[self.to_node_idx, self.vs_constraint_node_idx] += -1
-        
-        
-        
-        
-        '''
-        
-        # Old stamp
         Y[self.vs_constraint_node_idx, self.intermediate_node_idx] += 1
         if self.to_node != "gnd":
             Y[self.vs_constraint_node_idx, self.to_node_idx] += -1
@@ -82,15 +69,7 @@ class Capacitors:
         Y[self.intermediate_node_idx, self.vs_constraint_node_idx] += 1
         if self.to_node != "gnd":
             Y[self.to_node_idx, self.vs_constraint_node_idx] += -1
-        # check to see if the total voltage is reference to ground or not
-        if(self.to_node == "gnd"):
-            # if the cap is connected to ground then the voltage
-            # is just the from node's voltage
-            J[self.vs_constraint_node_idx] += results_t[self.from_node_idx] + self.r * results_t[self.vs_constraint_node_idx]
-        # otherwise it will be the difference between from and to nodes
-        else:
-            J[self.vs_constraint_node_idx] += (results_t[self.from_node_idx] - results_t[self.to_node_idx]) + self.r * results_t[self.vs_constraint_node_idx]
-    
-        '''
+        
+        
     def stamp_open(self,):
         pass

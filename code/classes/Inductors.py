@@ -43,7 +43,8 @@ class Inductors:
     def stamp_dense(self,Y,J,results_t,t,SETTINGS):
         # stamp the conductange - G
         self.g = SETTINGS["Time Step"]/(2*self.l)
-        # if neither nodes are ground
+        # An inductor stamp with a 0V voltage source can never have the conductance
+        # be coming from a gnd, as the conductance is stamped from the intermediate
         if (self.to_node != "gnd"):
             Y[self.intermediate_node_idx,self.intermediate_node_idx] += self.g
             Y[self.to_node_idx,self.to_node_idx] += self.g
@@ -57,15 +58,17 @@ class Inductors:
         # stamp the voltage source - Always 0V
         # solve for the voltage value for t
         V_t = 0
+        J[self.vs_constraint_node_idx] += V_t
+        
         Y[self.vs_constraint_node_idx, self.from_node_idx] += 1
         Y[self.vs_constraint_node_idx, self.intermediate_node_idx] += -1
-        J[self.vs_constraint_node_idx] += V_t
         Y[self.from_node_idx, self.vs_constraint_node_idx] += 1
         Y[self.intermediate_node_idx, self.vs_constraint_node_idx] += -1
             
         # stamp the current source
         if (self.to_node != "gnd"):
             I = results_t[self.vs_constraint_node_idx] + self.g * (results_t[self.intermediate_node_idx]-results_t[self.to_node_idx])
+            J[self.intermediate_node_idx] += -I
             J[self.to_node_idx] += I
         else:
             I = results_t[self.vs_constraint_node_idx] + self.g*(results_t[self.from_node_idx])

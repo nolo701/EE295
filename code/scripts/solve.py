@@ -5,7 +5,7 @@ from scripts.run_time_domain_simulation import run_time_domain_simulation
 from scripts.process_results import process_results
 import numpy as np
 
-def solve(TESTCASE, SETTINGS):
+def solve(TESTCASE, SETTINGS, desiredVoltages, desiredCurrents):
     """Run the time-domain solver.
     Args:
         TESTCASE (str): A string with the path to the network json file.
@@ -20,7 +20,7 @@ def solve(TESTCASE, SETTINGS):
     from classes import Capacitors
     from classes import Inductors
     from classes import VoltageSources
-
+    from classes import Switches
     # # # Parse the test case data # # #
     case_name = TESTCASE
     devices = parse_json(case_name)
@@ -48,9 +48,10 @@ def solve(TESTCASE, SETTINGS):
     # number of nodes in the system.
     node_dict={}
     size_Y = assign_node_indexes(devices,node_dict)
+    # create an inverse dictionary to allow the process_waves to have a way
+    # to create a legend from the index of the nodes
     inv_node_dict=dict(map(reversed, node_dict.items()))
-    print("Node Dict: ")
-    print(node_dict)
+
  
     # # # Initialize solution vector # # #
     # TODO: STEP 1 - Complete the function to find your state vector at time t=0.
@@ -62,10 +63,8 @@ def solve(TESTCASE, SETTINGS):
     # TODO: STEP 2 - Run the time domain simulation and return an array that contains
     #                time domain waveforms of all the state variables # # #
     V_waveform = run_time_domain_simulation(devices, V_init, size_Y, SETTINGS)
-    #V_waveform = run_time_domain_simulation(devices, size_Y, SETTINGS)
-    # print(V_waveform[:,1])
 
     # # # Process Results # # #
     # TODO: PART 1, STEP 3 - Write a process results function to compute the relevant results (voltage and current
     # waveforms, steady state values, etc.), plot them, and compare your output to the waveforms produced by Simulink
-    process_results(V_waveform, devices, SETTINGS, inv_node_dict)
+    process_results(V_waveform, devices, SETTINGS, inv_node_dict, desiredVoltages, desiredCurrents)

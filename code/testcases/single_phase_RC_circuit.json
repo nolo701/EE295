@@ -23,10 +23,10 @@
     ],
     "capacitors": [
         {
-            "name": "l1",
+            "name": "c1",
             "from_node": "n2_a",
             "to_node": "gnd",
-            "c": 2e-3
+            "c": 1e-3
         }        
     ],
     "inductors": [
