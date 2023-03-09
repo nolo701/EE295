@@ -1,70 +1,71 @@
-from lib.parse_json import parse_json
-from lib.assign_node_indexes import assign_node_indexes
-from lib.initialize import initialize
-from scripts.run_time_domain_simulation import run_time_domain_simulation
+from parsers.parser import parse_raw
+from scripts.PowerFlow import PowerFlow
 from scripts.process_results import process_results
-import numpy as np
+from scripts.initialize import initialize
+from models.Buses import Buses
 
-def solve(TESTCASE, SETTINGS, desiredVoltages, desiredCurrents):
-    """Run the time-domain solver.
+
+def solve(TESTCASE, SETTINGS):
+    """Run the power flow solver.
+
     Args:
-        TESTCASE (str): A string with the path to the network json file.
+        TESTCASE (str): A string with the path to the test case.
         SETTINGS (dict): Contains all the solver settings in a dictionary.
+
     Returns:
         None
     """
-    # TODO: STEP 0 - Initialize all the model classes in the models directory (models/) and familiarize
-    #  yourself with the parameters of each model.
-    from classes import Nodes as Nodes
-    from classes import Resistors
-    from classes import Capacitors
-    from classes import Inductors
-    from classes import VoltageSources
-    from classes import Switches
-    # # # Parse the test case data # # #
+    # TODO: PART 1, STEP 0 - Initialize all the model classes in the models directory (models/) and familiarize
+    #  yourself with the parameters of each model. Use the docs/DataFormats.pdf for assistance.
+
+    # # # Parse the Test Case Data # # #
     case_name = TESTCASE
-    devices = parse_json(case_name)
+    parsed_data = parse_raw(case_name)
 
-    # # # Unpack parsed device objects in case you need them # # #
-    nodes = devices['nodes']
-    voltage_sources = devices['voltage_sources']
-    resistors = devices['resistors']
-    capacitors = devices['capacitors']
-    inductors = devices['inductors']
-    switches = devices['switches']
-    induction_motors = devices['induction_motors']
+    # # # Assign Parsed Data to Variables # # #
+    bus = parsed_data['buses']
+    slack = parsed_data['slack']
+    generator = parsed_data['generators']
+    transformer = parsed_data['xfmrs']
+    branch = parsed_data['branches']
+    shunt = parsed_data['shunts']
+    load = parsed_data['loads']
 
-    # # # Solver settings # # #
-    t_final = SETTINGS['Simulation Time']
+    # # # Solver Settings # # #
     tol = SETTINGS['Tolerance']  # NR solver tolerance
     max_iters = SETTINGS['Max Iters']  # maximum NR iterations
+    enable_limiting = SETTINGS['Limiting']  # enable/disable voltage and reactive power limiting
 
-    # # # Assign system nodes # # #
-    # We assign a node index for every node in our Y matrix and J vector.
-    # In addition to voltages, nodes track currents of voltage sources and
-    # other state variables needed for companion models or the model of the 
-    # induction motor.
-    # You can determine the size of the Y matrix by looking at the total
-    # number of nodes in the system.
-    node_dict={}
-    size_Y = assign_node_indexes(devices,node_dict)
-    # create an inverse dictionary to allow the process_waves to have a way
-    # to create a legend from the index of the nodes
-    inv_node_dict=dict(map(reversed, node_dict.items()))
+    # # # Assign System Nodes Bus by Bus # # #
+    # We can use these nodes to have predetermined node number for every node in our Y matrix and J vector.
+    for ele in bus:
+        ele.assign_nodes()
 
- 
-    # # # Initialize solution vector # # #
-    # TODO: STEP 1 - Complete the function to find your state vector at time t=0.
-    V_init = initialize(devices, size_Y, node_dict, SETTINGS)
-    
-    # increase size_Y to account for matrix sizing starting at 1 not 0
-    #size_Y += 1
+    # Assign any slack nodes
+    for ele in slack:
+        ele.assign_nodes()
 
-    # TODO: STEP 2 - Run the time domain simulation and return an array that contains
-    #                time domain waveforms of all the state variables # # #
-    V_waveform = run_time_domain_simulation(devices, V_init, size_Y, SETTINGS)
+    # # # Initialize Solution Vector - V and Q values # # #
+
+    # determine the size of the Y matrix by looking at the total number of nodes in the system
+    size_Y = Buses._node_index.__next__()
+
+    # TODO: PART 1, STEP 1 - Complete the function to initialize your solution vector v_init.
+    v_init = None  # create a solution vector filled with zeros of size_Y
+    v_init = initialize()
+
+    # # # Run Power Flow # # #
+    powerflow = PowerFlow(case_name, tol, max_iters, enable_limiting)
+
+    # TODO: PART 1, STEP 2 - Complete the PowerFlow class and build your run_powerflow function to solve Equivalent
+    #  Circuit Formulation powerflow. The function will return a final solution vector v. Remove run_pf and the if
+    #  condition once you've finished building your solver.
+    run_pf = False
+    if run_pf:
+        v = powerflow.run_powerflow(v_init, bus, slack, generator, transformer, branch, shunt, load)
 
     # # # Process Results # # #
-    # TODO: PART 1, STEP 3 - Write a process results function to compute the relevant results (voltage and current
-    # waveforms, steady state values, etc.), plot them, and compare your output to the waveforms produced by Simulink
-    process_results(V_waveform, devices, SETTINGS, inv_node_dict, desiredVoltages, desiredCurrents)
+    # TODO: PART 1, STEP 3 - Write a process_results function to compute the relevant results (voltages, powers,
+    #  and anything else of interest) and find the voltage profile (maximum and minimum voltages in the case).
+    #  You can decide which arguments to pass to this function yourself.
+    process_results()
