@@ -39,6 +39,11 @@ class Generators:
         """
 
         self.id = self._ids.__next__()
+        self.Bus = Bus
+        #Normalize the P with 100 to convert to pu
+        self.P = P/100
+        self.Vset = Vset
+
 
         # You will need to implement the remainder of the __init__ function yourself.
         # You should also add some other class functions you deem necessary for stamping,

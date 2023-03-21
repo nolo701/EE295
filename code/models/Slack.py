@@ -1,5 +1,6 @@
 from __future__ import division
 from models.Buses import Buses
+import numpy as np
 
 
 class Slack:
@@ -24,6 +25,11 @@ class Slack:
         # initialize nodes
         self.node_Vr_Slack = None
         self.node_Vi_Slack = None
+        self.Vset = Vset
+        self.ang = ang
+        self.Vr_set = Vset*np.cos(self.ang*np.pi/180)
+        self.Vi_set = Vset*np.sin(self.ang*np.pi/180)
+
 
     def assign_nodes(self):
         """Assign the additional slack bus nodes for a slack bus.

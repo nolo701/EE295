@@ -29,6 +29,11 @@ class Branches:
             rateC (float): The 3rd rating of the line.
         """
         self.id = self._ids.__next__()
+        self.from_bus = from_bus
+        self.to_bus = to_bus
+        self.r = r
+        self.x = x
+        self.b = b
 
         # You will need to implement the remainder of the __init__ function yourself.
         # You should also add some other class functions you deem necessary for stamping,
