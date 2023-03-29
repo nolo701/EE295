@@ -4,10 +4,8 @@ import numpy as np
 class PowerFlow:
 
     def __init__(self,
-                 case_name,
-                 tol,
-                 max_iters,
-                 enable_limiting):
+                 SETTINGS,
+                 size_Y):
         """Initialize the PowerFlow instance.
 
         Args:
@@ -17,28 +15,73 @@ class PowerFlow:
             enable_limiting (bool): A flag that indicates if we use voltage limiting or not in our solver.
         """
         # Clean up the case name string
+        case_name =SETTINGS["case_name"]
         case_name = case_name.replace('.RAW', '')
         case_name = case_name.replace('testcases/', '')
 
         self.case_name = case_name
-        self.tol = tol
-        self.max_iters = max_iters
-        self.enable_limiting = enable_limiting
+        self.tol = SETTINGS["Tolerance"]
+        self.max_iters = SETTINGS["Max Iters"]
+        self.enable_limiting = SETTINGS["Limiting"]
+        self.sparse = SETTINGS["Sparse"]
+        self.size_Y = size_Y
 
-    def solve(self):
-        pass
+    def solve(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
+        if self.sparse == True:
+            pass
+        else:
+            Y = inputY_lin + inputY_nonlin
+            J = inputJ_lin + inputJ_nonlin
+            sol = np.linalg.solve(Y, J)
+            step = sol - prev_sol
+        return sol,step
 
     def apply_limiting(self):
         pass
 
-    def check_error(self):
+    def check_error(self, step):
+        error = np.linalg.norm(step)
+        
+        return error
+
+    def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack):
+        for ele in inputBranch:
+            if self.sparse == True:
+                ele.stamp_sparse(inputY, inputJ)
+            else:
+                ele.stamp_dense(inputY, inputJ)
+        for ele in inputSlack:
+            if self.sparse == True:
+                ele.stamp_sparse(inputY, inputJ)
+            else:
+                ele.stamp_dense(inputY, inputJ)      
+                
         pass
 
-    def stamp_linear(self):
-        pass
-
-    def stamp_nonlinear(self):
-        pass
+    def stamp_nonlinear(self, inputY, inputJ, v_prev, inputGenerator, inputLoad):
+        # Set all values to zero
+        #inputY = 0 * inputY
+        #inputJ = 0 * inputJ
+        if self.sparse == True:
+            Y_nonlin = np.zeros((1,3))
+            J_nonlin = np.zeros((1,3))
+            
+        else:
+            # make nonlin inits too
+            Y_nonlin = np.zeros((self.size_Y,self.size_Y))
+            J_nonlin = np.zeros((self.size_Y,1))
+            
+        for ele in inputGenerator:
+            if self.sparse == True:
+                ele.stamp_sparse(inputY, inputJ, v_prev)
+            else:
+                ele.stamp_dense(inputY, inputJ, v_prev) 
+        for ele in inputLoad:
+            if self.sparse == True:
+                ele.stamp_sparse(inputY, inputJ, v_prev)
+            else:
+                ele.stamp_dense(inputY, inputJ, v_prev) 
+            
 
     def run_powerflow(self,
                       v_init,
@@ -74,34 +117,57 @@ class PowerFlow:
         # TODO: PART 1, STEP 2.1 - Complete the stamp_linear function which stamps all linear power grid elements.
         #  This function should call the stamp_linear function of each linear element and return an updated Y matrix.
         #  You need to decide the input arguments and return values.
-        self.stamp_linear()
+        
+        # Init differently if sparse is True or False
+        if self.sparse == True:
+            Y_lin = np.zeros((1,3))
+            J_lin = np.zeros((1,3))
+            Y_nonlin = np.zeros((1,3))
+            J_nonlin = np.zeros((1,3))
+            
+        else:
+            # create linear Y & J
+            Y_lin = np.zeros((self.size_Y,self.size_Y))
+            J_lin = np.zeros((self.size_Y,1))
+            # make nonlin inits too
+            Y_nonlin = np.zeros((self.size_Y,self.size_Y))
+            J_nonlin = np.zeros((self.size_Y,1))
+        
+        # stamp the linear
+        self.stamp_linear(Y_lin,J_lin,branch,slack)
+            
+            
 
         # # # Initialize While Loop (NR) Variables # # #
         # TODO: PART 1, STEP 2.2 - Initialize the NR variables
-        err_max = None  # maximum error at the current NR iteration
-        tol = None  # chosen NR tolerance
-        NR_count = None  # current NR iteration
+        err_max = self.tol+1  # maximum error at the current NR iteration
+        tol = self.tol  # chosen NR tolerance
+        NR_count = 0  # current NR iteration
+
+        step = 0
 
         # # # Begin Solving Via NR # # #
         # TODO: PART 1, STEP 2.3 - Complete the NR While Loop
-        while err_max > tol:
-
+        while (err_max > tol) and (NR_count < self.max_iters):
+            print("Started Iter:")
+            print(NR_count+1)
             # # # Stamp Nonlinear Power Grid Elements into Y matrix # # #
             # TODO: PART 1, STEP 2.4 - Complete the stamp_nonlinear function which stamps all nonlinear power grid
             #  elements. This function should call the stamp_nonlinear function of each nonlinear element and return
             #  an updated Y matrix. You need to decide the input arguments and return values.
-            self.stamp_nonlinear()
-
+            self.stamp_nonlinear(Y_nonlin, J_nonlin, v_sol, generator, load)
+            
             # # # Solve The System # # #
             # TODO: PART 1, STEP 2.5 - Complete the solve function which solves system of equations Yv = J. The
             #  function should return a new v_sol.
             #  You need to decide the input arguments and return values.
-            self.solve()
-
+            v_sol,step = self.solve(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
+            
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 1, STEP 2.6 - Finish the check_error function which calculates the maximum error, err_max
             #  You need to decide the input arguments and return values.
-            self.check_error()
+            err_max = self.check_error(step)
+            
 
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 2, STEP 1 - Develop the apply_limiting function which implements voltage and reactive power
@@ -111,5 +177,12 @@ class PowerFlow:
                 self.apply_limiting()
             else:
                 pass
+            print(v_sol)
+            print("Finished Iter:")
+            print(NR_count+1)
+            NR_count += 1
 
+        print("Final Solution found after inter: ")
+        print(NR_count)
+        print(v_sol)
         return v

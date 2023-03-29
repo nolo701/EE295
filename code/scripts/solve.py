@@ -3,7 +3,7 @@ from scripts.PowerFlow import PowerFlow
 from scripts.process_results import process_results
 from scripts.initialize import initialize
 from models.Buses import Buses
-
+import numpy as np
 
 def solve(TESTCASE, SETTINGS):
     """Run the power flow solver.
@@ -41,9 +41,22 @@ def solve(TESTCASE, SETTINGS):
     for ele in bus:
         ele.assign_nodes()
 
+    # instantiate the branches
+    for ele in branch:
+        ele.assign_buses(bus)
+        
     # Assign any slack nodes
     for ele in slack:
         ele.assign_nodes()
+        ele.assign_buses(bus)
+    
+    # instantiate the generators
+    for ele in generator:
+        ele.assign_buses(bus)
+        
+    # instantiate the loads
+    for ele in load:
+        ele.assign_buses(bus)
 
     # # # Initialize Solution Vector - V and Q values # # #
 
@@ -51,19 +64,19 @@ def solve(TESTCASE, SETTINGS):
     size_Y = Buses._node_index.__next__()
 
     # TODO: PART 1, STEP 1 - Complete the function to initialize your solution vector v_init.
-    v_init = None  # create a solution vector filled with zeros of size_Y
-    v_init = initialize()
+    v_init = np.zeros((size_Y,1))  # create a solution vector filled with zeros of size_Y
+    v_init = initialize(v_init,bus,slack)
 
     # # # Run Power Flow # # #
-    powerflow = PowerFlow(case_name, tol, max_iters, enable_limiting)
+    powerflow = PowerFlow(SETTINGS, size_Y)
 
     # TODO: PART 1, STEP 2 - Complete the PowerFlow class and build your run_powerflow function to solve Equivalent
     #  Circuit Formulation powerflow. The function will return a final solution vector v. Remove run_pf and the if
     #  condition once you've finished building your solver.
-    run_pf = False
+    run_pf = True
     if run_pf:
         v = powerflow.run_powerflow(v_init, bus, slack, generator, transformer, branch, shunt, load)
-
+    
     # # # Process Results # # #
     # TODO: PART 1, STEP 3 - Write a process_results function to compute the relevant results (voltages, powers,
     #  and anything else of interest) and find the voltage profile (maximum and minimum voltages in the case).
