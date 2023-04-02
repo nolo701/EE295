@@ -32,16 +32,15 @@ class PowerFlow:
         else:
             Y = inputY_lin + inputY_nonlin
             J = inputJ_lin + inputJ_nonlin
-            sol = np.linalg.solve(Y, J)
-            step = sol - prev_sol
+            step = np.linalg.solve(Y, J)
+            sol = prev_sol - step
         return sol,step
 
     def apply_limiting(self):
         pass
 
-    def check_error(self, step):
-        error = np.linalg.norm(step)
-        
+    def check_error(self, sol):
+        error = np.linalg.norm(sol)
         return error
 
     def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack):
@@ -180,9 +179,11 @@ class PowerFlow:
             print(v_sol)
             print("Finished Iter:")
             print(NR_count+1)
+            print(err_max)
             NR_count += 1
 
         print("Final Solution found after inter: ")
         print(NR_count)
         print(v_sol)
+        
         return v

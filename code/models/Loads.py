@@ -69,7 +69,7 @@ class Loads:
         # stamp the VCCS
         inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
         # stamp the CCS
-        inputJ[self.bus.node_Vr] += -Vr_load
+        inputJ[self.bus.node_Vr] += Vr_load
         
         # Constant Current source of IM
         # evaluate the functions to get info to stamp the constant current source
@@ -84,7 +84,7 @@ class Loads:
         # stamp the VCCS
         inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
         # stamp the CCS
-        inputJ[self.bus.node_Vi] += -Vi_load
+        inputJ[self.bus.node_Vi] += Vi_load
         
         
         
