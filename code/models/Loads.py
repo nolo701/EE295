@@ -63,6 +63,47 @@ class Loads:
         dIrg_wrt_Vi = (Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
 
         # Get summed value for the CCS
+        Vr_load = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi
+        # stamp the conductance
+        inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
+        # stamp the VCCS
+        inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
+        # stamp the CCS
+        inputJ[self.bus.node_Vr] += -Vr_load
+        
+        # Constant Current source of IM
+        # evaluate the functions to get info to stamp the constant current source
+        Iig_prev = (P*Vi-Q*Vr)/denom
+        dIig_wrt_Vr = dIrg_wrt_Vi
+        dIig_wrt_Vi = -dIrg_wrt_Vr
+
+        # Final value of Taylor Series Expansion
+        Vi_load = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi
+        # stamp the conductance
+        inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
+        # stamp the VCCS
+        inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
+        # stamp the CCS
+        inputJ[self.bus.node_Vi] += -Vi_load
+
+        return
+    
+    def stamp_denseOLD(self, inputY, inputJ, prev_sol):
+        # grab values used to evaluate the functions
+        P = self.P
+        Vr = prev_sol[self.bus.node_Vr]
+        Vi = prev_sol[self.bus.node_Vi]
+        Q = self.Q
+        # helpful value that is repeated
+        denom = (Vr**2+Vi**2)
+        
+        # Constant Current source of RE
+        # evaluate the functions to get info for circuit element stamps
+        Irg_prev = (P*Vr+Q*Vi)/denom
+        dIrg_wrt_Vr = (P*(Vi**2-Vr**2) - 2*Q*Vr*Vi)/(denom)**2
+        dIrg_wrt_Vi = (Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
+
+        # Get summed value for the CCS
         Vr_load = -Irg_prev + dIrg_wrt_Vr*Vr + dIrg_wrt_Vi*Vi
         # stamp the conductance
         inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr

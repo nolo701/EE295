@@ -27,20 +27,22 @@ class PowerFlow:
         self.size_Y = size_Y
 
     def solve(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
+    #def solve(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
         if self.sparse == True:
             pass
         else:
             Y = inputY_lin + inputY_nonlin
             J = inputJ_lin + inputJ_nonlin
-            step = np.linalg.solve(Y, J)
-            sol = prev_sol - step
-        return sol,step
+            sol = np.linalg.solve(Y, J)
+
+        return sol
 
     def apply_limiting(self):
         pass
 
-    def check_error(self, sol):
-        error = np.linalg.norm(sol)
+    def check_error(self, step):
+        error = max(abs(step))
+        #error = np.linalg.norm(sol)
         return error
 
     def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack):
@@ -57,29 +59,32 @@ class PowerFlow:
                 
         pass
 
-    def stamp_nonlinear(self, inputY, inputJ, v_prev, inputGenerator, inputLoad):
+    def stamp_nonlinear(self, v_prev, inputGenerator, inputLoad):
         # Set all values to zero
         #inputY = 0 * inputY
         #inputJ = 0 * inputJ
         if self.sparse == True:
-            Y_nonlin = np.zeros((1,3))
-            J_nonlin = np.zeros((1,3))
-            
+            Y = np.zeros((1,3))
+            J = np.zeros((1,3))
+            pass
         else:
+            pass
             # make nonlin inits too
-            Y_nonlin = np.zeros((self.size_Y,self.size_Y))
-            J_nonlin = np.zeros((self.size_Y,1))
+            Y = np.zeros((self.size_Y,self.size_Y))
+            J = np.zeros((self.size_Y,1))
             
         for ele in inputGenerator:
             if self.sparse == True:
-                ele.stamp_sparse(inputY, inputJ, v_prev)
+                ele.stamp_sparse(Y, J, v_prev)
             else:
-                ele.stamp_dense(inputY, inputJ, v_prev) 
+                ele.stamp_dense(Y, J, v_prev) 
         for ele in inputLoad:
             if self.sparse == True:
-                ele.stamp_sparse(inputY, inputJ, v_prev)
+                ele.stamp_sparse(Y, J, v_prev)
             else:
-                ele.stamp_dense(inputY, inputJ, v_prev) 
+                ele.stamp_dense(Y, J, v_prev) 
+                
+        return Y, J
             
 
     def run_powerflow(self,
@@ -134,15 +139,12 @@ class PowerFlow:
         
         # stamp the linear
         self.stamp_linear(Y_lin,J_lin,branch,slack)
-            
-            
 
         # # # Initialize While Loop (NR) Variables # # #
         # TODO: PART 1, STEP 2.2 - Initialize the NR variables
         err_max = self.tol+1  # maximum error at the current NR iteration
         tol = self.tol  # chosen NR tolerance
         NR_count = 0  # current NR iteration
-
         step = 0
 
         # # # Begin Solving Via NR # # #
@@ -154,19 +156,21 @@ class PowerFlow:
             # TODO: PART 1, STEP 2.4 - Complete the stamp_nonlinear function which stamps all nonlinear power grid
             #  elements. This function should call the stamp_nonlinear function of each nonlinear element and return
             #  an updated Y matrix. You need to decide the input arguments and return values.
-            self.stamp_nonlinear(Y_nonlin, J_nonlin, v_sol, generator, load)
+            Y_nonlin, J_nonlin = self.stamp_nonlinear(v_sol, generator, load)
             
             # # # Solve The System # # #
             # TODO: PART 1, STEP 2.5 - Complete the solve function which solves system of equations Yv = J. The
             #  function should return a new v_sol.
             #  You need to decide the input arguments and return values.
-            v_sol,step = self.solve(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
-            
+            v_sol_next = self.solve(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
+           
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 1, STEP 2.6 - Finish the check_error function which calculates the maximum error, err_max
             #  You need to decide the input arguments and return values.
-            err_max = self.check_error(step)
+            diff = np.subtract(v_sol_next,v_sol)
             
+            err_max = self.check_error(diff)
+            v_sol = v_sol_next
 
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 2, STEP 1 - Develop the apply_limiting function which implements voltage and reactive power

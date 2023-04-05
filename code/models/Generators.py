@@ -72,10 +72,65 @@ class Generators:
         
         # Constant Current source of RE
         # evaluate the functions to get info for circuit element stamps
+        Irg_prev = (P*Vr-Q*Vi)/denom
+        dIrg_wrt_Vr = (P*(Vi**2-Vr**2) + 2*Q*Vr*Vi)/(denom)**2
+        dIrg_wrt_Vi = (Q*(Vi**2-Vr**2) - 2*P*Vr*Vi)/(denom)**2
+        dIrg_wrt_Q = -Vi/denom
+        # Get summed value for the CCS
+        Vr_gen = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi - dIrg_wrt_Q*Q
+        # stamp the conductance
+        inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
+        # stamp the VCCS
+        inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
+        # stamp the extra var
+        inputY[self.bus.node_Vr, self.bus.node_Q] += dIrg_wrt_Q
+        # stamp the CCS
+        inputJ[self.bus.node_Vr] += -Vr_gen
+        
+        # Constant Current source of IM
+        # evaluate the functions to get info to stamp the constant current source
+        Iig_prev = (P*Vi+Q*Vr)/denom
+        dIig_wrt_Vr = dIrg_wrt_Vi
+        dIig_wrt_Vi = -dIrg_wrt_Vr
+        dIig_wrt_Q = Vr/denom
+        # Final value of Taylor Series Expansion
+        Vi_gen = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi - dIig_wrt_Q*Q
+        # stamp the conductance
+        inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
+        # stamp the VCCS
+        inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
+        # stamp the extra var
+        inputY[self.bus.node_Vi, self.bus.node_Q] += dIig_wrt_Q
+        # stamp the CCS
+        inputJ[self.bus.node_Vi] += -Vi_gen
+        
+        # Apply the VSet constraint (not a circuit element but required for coupling)
+        Vset_prev = self.Vset**2 - Vr**2 - Vi**2
+        dVset_wrt_Vr = 2*Vr
+        dVset_wrt_Vi = 2*Vi
+        Vset_gen = -Vset_prev - dVset_wrt_Vi*Vi - dVset_wrt_Vr*Vr
+        # stamp them
+        inputY[self.bus.node_Q, self.bus.node_Vr] += dVset_wrt_Vr
+        inputY[self.bus.node_Q, self.bus.node_Vi] += dVset_wrt_Vi
+        inputJ[self.bus.node_Q] += -Vset_gen
+            
+        return
+    
+    def stamp_denseOLD(self, inputY, inputJ, prev_sol):
+        # grab values used to evaluate the functions
+        P = -self.P
+        Vr = prev_sol[self.bus.node_Vr]
+        Vi = prev_sol[self.bus.node_Vi]
+        Q = prev_sol[self.bus.node_Q]
+        # helpful value that is repeated
+        denom = (Vr**2+Vi**2)
+        
+        # Constant Current source of RE
+        # evaluate the functions to get info for circuit element stamps
         Irg_prev = (P*Vr+Q*Vi)/denom
         dIrg_wrt_Vr = (P*(Vi**2-Vr**2) - 2*Q*Vr*Vi)/(denom)**2
         dIrg_wrt_Vi = -(Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
-        dIrg_wrt_Q = -Vi/denom
+        dIrg_wrt_Q = Vi/denom
         # Get summed value for the CCS
         Vr_gen = -Irg_prev + dIrg_wrt_Vr*Vr + dIrg_wrt_Vi*Vi + dIrg_wrt_Q*Q
         # stamp the conductance
@@ -90,28 +145,28 @@ class Generators:
         # Constant Current source of IM
         # evaluate the functions to get info to stamp the constant current source
         Iig_prev = (P*Vi-Q*Vr)/denom
-        dIig_wrt_Vr = dIrg_wrt_Vi
+        dIig_wrt_Vr = -dIrg_wrt_Vi
         dIig_wrt_Vi = -dIrg_wrt_Vr
         dIig_wrt_Q = -Vr/denom
         # Final value of Taylor Series Expansion
         Vi_gen = -Iig_prev + dIig_wrt_Vr*Vr + dIig_wrt_Vi*Vi + dIig_wrt_Q*Q
         # stamp the conductance
-        inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
+        inputY[self.bus.node_Vi, self.bus.node_Vr] += -dIig_wrt_Vr
         # stamp the VCCS
         inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
         # stamp the extra var
         inputY[self.bus.node_Vi, self.bus.node_Q] += -dIig_wrt_Q
         # stamp the CCS
-        inputJ[self.bus.node_Vi] += Vi_gen
+        inputJ[self.bus.node_Vi] += -Vi_gen
         
         # Apply the VSet constraint (not a circuit element but required for coupling)
         Vset_prev = self.Vset**2 - Vr**2 - Vi**2
-        dVset_wrt_Vr = 2*Vr
-        dVset_wrt_Vi = 2*Vi
+        dVset_wrt_Vr = -2*Vr
+        dVset_wrt_Vi = -2*Vi
         Vset_gen = -Vset_prev + dVset_wrt_Vi*Vi + dVset_wrt_Vr*Vr
         # stamp them
-        inputY[self.bus.node_Q, self.bus.node_Vr] += dVset_wrt_Vr
+        inputY[self.bus.node_Q, self.bus.node_Vr] += -dVset_wrt_Vr
         inputY[self.bus.node_Q, self.bus.node_Vi] += dVset_wrt_Vi
-        inputJ[self.bus.node_Q] += Vset_gen
+        inputJ[self.bus.node_Q] += -Vset_gen
             
         return
