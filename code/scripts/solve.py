@@ -57,6 +57,15 @@ def solve(TESTCASE, SETTINGS):
     # instantiate the loads
     for ele in load:
         ele.assign_buses(bus)
+        
+    # instantiate the shunts
+    for ele in shunt:
+        ele.assign_buses(bus)
+        
+    # instantiate the transformers
+    for ele in transformer:
+        ele.assign_nodes()
+        ele.assign_buses(bus)
 
     # # # Initialize Solution Vector - V and Q values # # #
 

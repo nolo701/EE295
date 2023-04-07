@@ -45,7 +45,7 @@ class PowerFlow:
         #error = np.linalg.norm(sol)
         return error
 
-    def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack):
+    def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack, inputShunt, inputTransformer):
         for ele in inputBranch:
             if self.sparse == True:
                 ele.stamp_sparse(inputY, inputJ)
@@ -55,7 +55,21 @@ class PowerFlow:
             if self.sparse == True:
                 ele.stamp_sparse(inputY, inputJ)
             else:
-                ele.stamp_dense(inputY, inputJ)      
+                ele.stamp_dense(inputY, inputJ) 
+                
+        for ele in inputShunt:
+            if self.sparse == True:
+                #ele.stamp_sparse(inputY, J, v_prev)
+                pass
+            else:
+                ele.stamp_dense(inputY) 
+                
+        for ele in inputTransformer:
+            if self.sparse == True:
+                #ele.stamp_sparse(Y, J, v_prev)
+                pass
+            else:
+                ele.stamp_dense(inputY) 
                 
         pass
 
@@ -78,11 +92,14 @@ class PowerFlow:
                 ele.stamp_sparse(Y, J, v_prev)
             else:
                 ele.stamp_dense(Y, J, v_prev) 
+                
         for ele in inputLoad:
             if self.sparse == True:
                 ele.stamp_sparse(Y, J, v_prev)
             else:
-                ele.stamp_dense(Y, J, v_prev) 
+                ele.stamp_dense(Y, J, v_prev)
+                
+        
                 
         return Y, J
             
@@ -138,7 +155,7 @@ class PowerFlow:
             J_nonlin = np.zeros((self.size_Y,1))
         
         # stamp the linear
-        self.stamp_linear(Y_lin,J_lin,branch,slack)
+        self.stamp_linear(Y_lin,J_lin,branch,slack,shunt,transformer)
 
         # # # Initialize While Loop (NR) Variables # # #
         # TODO: PART 1, STEP 2.2 - Initialize the NR variables

@@ -1,7 +1,8 @@
 from scripts.solve import solve
 
 # path to the grid network RAW file
-casename = 'testcases/GS-4_prior_solution.RAW'
+#casename = 'testcases/GS-4_prior_solution.RAW'
+casename = 'testcases/IEEE-14_prior_solution.RAW'
 
 # the settings for the solver
 settings = {

@@ -73,9 +73,11 @@ class Transformers:
         # Imag - To (V2I)
         self.node_im_to = Buses._node_index.__next__()
         
-    def stamp_dense(self, inputY, inputJ):
+    def stamp_dense(self, inputY_test):
         # Stamp VCVS RE-From 1
         # "Gain" of the source
+        inputY = 0*np.copy(inputY_test)
+        
         Av = self.tr * np.cos(self.ang)
         # Set the location voltage drop
         inputY[self.from_bus.node_Vr, self.vs_re_from_1] += 1
@@ -126,7 +128,7 @@ class Transformers:
         # - Terminal (grounded)
         #inputY[self.vs_re_from_2, self.node_re_from] += -1
         # + Referenced Terminal
-        inputY[self.vs_re_from_2, self.node_im_to] += -Av
+        inputY[self.vs_im_from_2, self.node_im_to] += -Av
         
         # Stamp Current Controlled Current Sources on the To-Side
         # Stamp CCCS RE-TO: ref I1RE
@@ -141,17 +143,42 @@ class Transformers:
         
         # Stamp CCCS IM-TO: ref I1RE
         # Current "Gain"
-        Av = -1 * self.tr * np.cos(self.ang)
+        Av = self.tr * np.sin(self.ang)
         inputY[self.node_im_to, self.vs_re_from_1] += Av
         
         # Stamp CCCS IM-TO: ref I1IM
         # Current "Gain"
-        Av = self.tr * np.sin(self.ang)
+        Av = -1 * self.tr * np.cos(self.ang)
         inputY[self.node_im_to, self.vs_im_from_1] += Av
         
         # Stamp the psuedo branch that acts as as loss
+        # Stamp the VCCS in the RE
+        Av = self.x/(self.r**2+self.x**2)
+        inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
+        inputY[self.node_re_to, self.to_bus.node_Vi] += -Av
+        inputY[self.to_bus.node_Vr, self.node_im_to] += -Av
+        inputY[self.node_re_to, self.node_im_to] += Av
         
+        # Stamp the conductance in the RE
+        G = self.r/(self.r**2+self.x**2)
+        inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
+        inputY[self.to_bus.node_Vr, self.node_re_to] += -G
+        inputY[self.node_re_to,self.to_bus.node_Vr] += -G
+        inputY[self.node_re_to,self.node_re_to] += G
         
+        # Stamp the VCCS in the IM
+        Av = -1*self.x/(self.r**2+self.x**2)
+        inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
+        inputY[self.to_bus.node_Vi, self.node_re_to] += -Av
+        inputY[self.node_im_to, self.to_bus.node_Vr] += -Av
+        inputY[self.node_im_to, self.node_re_to] += Av
+        
+        # Stamp the conductance in the RE XXXXXXXXX
+        G = self.r/(self.r**2+self.x**2)
+        inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
+        inputY[self.to_bus.node_Vi, self.node_im_to] += -G
+        inputY[self.node_im_to,self.to_bus.node_Vi] += -G
+        inputY[self.node_im_to,self.node_im_to] += G
 
         pass
         
