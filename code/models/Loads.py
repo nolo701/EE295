@@ -87,8 +87,8 @@ class Loads:
         inputJ[self.bus.node_Vi] += -Vi_load
 
         return
-    
-    def stamp_denseOLD(self, inputY, inputJ, prev_sol):
+        
+    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val, prev_sol):
         # grab values used to evaluate the functions
         P = self.P
         Vr = prev_sol[self.bus.node_Vr]
@@ -104,13 +104,23 @@ class Loads:
         dIrg_wrt_Vi = (Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
 
         # Get summed value for the CCS
-        Vr_load = -Irg_prev + dIrg_wrt_Vr*Vr + dIrg_wrt_Vi*Vi
+        Vr_load = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi
         # stamp the conductance
-        inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
+        #inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
+        inputY_r.append(self.bus.node_Vr)
+        inputY_c.append(self.bus.node_Vr)
+        inputY_val.append(dIrg_wrt_Vr)
+        
         # stamp the VCCS
-        inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
+        #inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
+        inputY_r.append(self.bus.node_Vr)
+        inputY_c.append(self.bus.node_Vi)
+        inputY_val.append(dIrg_wrt_Vi)
+        
         # stamp the CCS
-        inputJ[self.bus.node_Vr] += Vr_load
+        #inputJ[self.bus.node_Vr] += -Vr_load
+        inputJ_r.append(self.bus.node_Vr)
+        inputJ_val.append(-Vr_load)
         
         # Constant Current source of IM
         # evaluate the functions to get info to stamp the constant current source
@@ -119,18 +129,23 @@ class Loads:
         dIig_wrt_Vi = -dIrg_wrt_Vr
 
         # Final value of Taylor Series Expansion
-        Vi_load = -Iig_prev + dIig_wrt_Vr*Vr + dIig_wrt_Vi*Vi
+        Vi_load = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi
         # stamp the conductance
-        inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
+        #inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
+        inputY_r.append(self.bus.node_Vi)
+        inputY_c.append(self.bus.node_Vr)
+        inputY_val.append(dIig_wrt_Vr)
+        
         # stamp the VCCS
-        inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
+        #inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
+        inputY_r.append(self.bus.node_Vi)
+        inputY_c.append(self.bus.node_Vi)
+        inputY_val.append(dIig_wrt_Vi)
+        
         # stamp the CCS
-        inputJ[self.bus.node_Vi] += Vi_load
-        
-        
-        
-        
+        #inputJ[self.bus.node_Vi] += -Vi_load
+        inputJ_r.append(self.bus.node_Vi)
+        inputJ_val.append(-Vi_load)
         
         
         return
-        

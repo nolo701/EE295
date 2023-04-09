@@ -1,7 +1,7 @@
 from __future__ import division
 from itertools import count
 from models.Buses import Buses
-
+import numpy as np
 
 class Branches:
     _ids = count(0)
@@ -51,7 +51,7 @@ class Branches:
         self.to_bus = bus_vec[self.to_bus_id-1]
         
         return
-    def stamp_dense(self, inputY, inputJ):
+    def stamp_dense(self, inputY):
         # get the series conductance
         G = self.r/(self.r**2 + self.x**2)
         # stamp the conductance into the RE
@@ -92,7 +92,7 @@ class Branches:
         
         return
     
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val):
+    def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
         # get the series conductance
         G = self.r/(self.r**2 + self.x**2)
         # stamp the conductance into the RE

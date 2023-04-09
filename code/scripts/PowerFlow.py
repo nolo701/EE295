@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import sparse
 
 
 class PowerFlow:
@@ -26,14 +27,23 @@ class PowerFlow:
         self.sparse = SETTINGS["Sparse"]
         self.size_Y = size_Y
 
-    def solve(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
-    #def solve(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
-        if self.sparse == True:
-            pass
-        else:
-            Y = inputY_lin + inputY_nonlin
-            J = inputJ_lin + inputJ_nonlin
-            sol = np.linalg.solve(Y, J)
+    def solve_dense(self, inputY_lin, inputJ_lin, inputY_nonlin, inputJ_nonlin, prev_sol):
+        Y = inputY_lin + inputY_nonlin
+        J = inputJ_lin + inputJ_nonlin
+        sol = np.linalg.solve(Y, J)
+
+        return sol
+    
+    def solve_sparse(self, Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r,
+                     Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol):
+        Y_r = Y_lin_r.append(Y_nonlin_r)
+        Y_c = Y_lin_c.append(Y_nonlin_c)
+        Y_val = Y_lin_val.append(Y_nonlin_val)
+        J_r = J_lin_r.append(J_nonlin_r)
+        J_val = J_lin_val.append(J_nonlin_val)
+        Y = sparse.csr_matrix(Y_val,(Y_r,Y_c))
+        J = sparse.csr_matrix(J_val,(J_r,1))
+        sol = np.array(sparse.linalg.spsolve(Y,J.astype(np.float64)))
 
         return sol
 
@@ -45,39 +55,58 @@ class PowerFlow:
         #error = np.linalg.norm(sol)
         return error
 
-    def stamp_linear(self, inputY, inputJ, inputBranch, inputSlack, inputShunt, inputTransformer):
+    def stamp_linear(self, inputBranch, inputSlack, inputShunt, inputTransformer):
+        # Init differently if sparse is True or False
+        if self.sparse == True:
+            Y_lin_r = np.zeros((1,3))
+            Y_lin_c = np.zeros((1,3))
+            Y_lin_val = np.zeros((1,3))
+            J_lin_r = np.zeros((1,3))
+            J_lin_val = np.zeros((1,3))
+            
+        else:
+            # create linear Y & J
+            Y_lin = np.zeros((self.size_Y,self.size_Y))
+            J_lin = np.zeros((self.size_Y,1))
+        
         for ele in inputBranch:
             if self.sparse == True:
-                ele.stamp_sparse(inputY, inputJ)
+                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
             else:
-                ele.stamp_dense(inputY, inputJ)
+                ele.stamp_dense(Y_lin)
         for ele in inputSlack:
             if self.sparse == True:
-                ele.stamp_sparse(inputY, inputJ)
+                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val)
             else:
-                ele.stamp_dense(inputY, inputJ) 
+                ele.stamp_dense(Y_lin, J_lin) 
                 
         for ele in inputShunt:
             if self.sparse == True:
-                #ele.stamp_sparse(inputY, J, v_prev)
+                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
                 pass
             else:
-                ele.stamp_dense(inputY) 
+                ele.stamp_dense(Y_lin) 
        
         for ele in inputTransformer:
             if self.sparse == True:
-                #ele.stamp_sparse(Y, J, v_prev)
+                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
                 pass
             else:
-                ele.stamp_dense(inputY) 
+                ele.stamp_dense(Y_lin) 
                 
-        pass
+        if self.sparse == True:
+            return Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val
+        else:
+            return Y_lin, J_lin
 
     def stamp_nonlinear(self, v_prev, inputGenerator, inputLoad):
         # Set all values to zero
         if self.sparse == True:
-            Y = np.zeros((1,3))
-            J = np.zeros((1,3))
+            Y_nonlin_r = np.zeros((1,3))
+            Y_nonlin_c = np.zeros((1,3))
+            Y_nonlin_val = np.zeros((1,3))
+            J_nonlin_r = np.zeros((1,3))
+            J_nonlin_val = np.zeros((1,3))
             pass
         else:
             pass
@@ -87,19 +116,20 @@ class PowerFlow:
             
         for ele in inputGenerator:
             if self.sparse == True:
-                ele.stamp_sparse(Y, J, v_prev)
+                ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
             else:
                 ele.stamp_dense(Y, J, v_prev) 
                 
         for ele in inputLoad:
             if self.sparse == True:
-                ele.stamp_sparse(Y, J, v_prev)
+                ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
             else:
                 ele.stamp_dense(Y, J, v_prev)
                 
-        
-                
-        return Y, J
+        if self.sparse == True:
+            return Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val
+        else:
+            return Y, J
             
 
     def run_powerflow(self,
@@ -137,23 +167,13 @@ class PowerFlow:
         #  This function should call the stamp_linear function of each linear element and return an updated Y matrix.
         #  You need to decide the input arguments and return values.
         
-        # Init differently if sparse is True or False
-        if self.sparse == True:
-            Y_lin = np.zeros((1,3))
-            J_lin = np.zeros((1,3))
-            Y_nonlin = np.zeros((1,3))
-            J_nonlin = np.zeros((1,3))
-            
-        else:
-            # create linear Y & J
-            Y_lin = np.zeros((self.size_Y,self.size_Y))
-            J_lin = np.zeros((self.size_Y,1))
-            # make nonlin inits too
-            Y_nonlin = np.zeros((self.size_Y,self.size_Y))
-            J_nonlin = np.zeros((self.size_Y,1))
+        
         
         # stamp the linear
-        self.stamp_linear(Y_lin,J_lin,branch,slack,shunt,transformer)
+        if self.sparse == True:
+            Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val = self.stamp_linear(branch,slack,shunt,transformer)
+        else:
+            Y_lin, J_lin = self.stamp_linear(branch,slack,shunt,transformer)
 
         # # # Initialize While Loop (NR) Variables # # #
         # TODO: PART 1, STEP 2.2 - Initialize the NR variables
@@ -171,8 +191,13 @@ class PowerFlow:
             # TODO: PART 1, STEP 2.4 - Complete the stamp_nonlinear function which stamps all nonlinear power grid
             #  elements. This function should call the stamp_nonlinear function of each nonlinear element and return
             #  an updated Y matrix. You need to decide the input arguments and return values.
-            Y_nonlin, J_nonlin = self.stamp_nonlinear(v_sol, generator, load)
-            
+            if self.sparse == True:
+                Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val = self.stamp_nonlinear(v_sol, generator, load)
+                v_sol_next = self.solve_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol)
+            else:
+                Y_nonlin, J_nonlin = self.stamp_linear(branch,slack,shunt,transformer)
+                v_sol_next = self.solve_dense(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
+
             # # # Solve The System # # #
             # TODO: PART 1, STEP 2.5 - Complete the solve function which solves system of equations Yv = J. The
             #  function should return a new v_sol.
