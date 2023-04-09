@@ -93,6 +93,121 @@ class Branches:
         return
     
     def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val):
+        # get the series conductance
+        G = self.r/(self.r**2 + self.x**2)
+        # stamp the conductance into the RE
+        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vr] += G
+        inputY_r.append(self.to_bus.node_Vr)
+        inputY_c.append(self.to_bus.node_Vr)
+        inputY_val.append(G)
+        
+        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vr] += G
+        inputY_r.append(self.from_bus.node_Vr)
+        inputY_c.append(self.from_bus.node_Vr)
+        inputY_val.append(G)
+        
+        #inputY[self.to_bus.node_Vr,self.from_bus.node_Vr] += -G
+        inputY_r.append(self.to_bus.node_Vr)
+        inputY_c.append(self.from_bus.node_Vr)
+        inputY_val.append(-G)
+        
+        #inputY[self.from_bus.node_Vr,self.to_bus.node_Vr] += -G
+        inputY_r.append(self.from_bus.node_Vr)
+        inputY_c.append(self.to_bus.node_Vr)
+        inputY_val.append(-G)
+        
+        # stamp the conductance into the IM
+        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vi] += G
+        inputY_r.append(self.to_bus.node_Vi)
+        inputY_c.append(self.to_bus.node_Vi)
+        inputY_val.append(G)
+        
+        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vi] += G
+        inputY_r.append(self.from_bus.node_Vi)
+        inputY_c.append(self.from_bus.node_Vi)
+        inputY_val.append(G)
+        
+        #inputY[self.to_bus.node_Vi,self.from_bus.node_Vi] += -G
+        inputY_r.append(self.to_bus.node_Vi)
+        inputY_c.append(self.from_bus.node_Vi)
+        inputY_val.append(-G)
+        
+        #inputY[self.from_bus.node_Vi,self.to_bus.node_Vi] += -G
+        inputY_r.append(self.from_bus.node_Vi)
+        inputY_c.append(self.to_bus.node_Vi)
+        inputY_val.append(-G)
+        
+        
+        # get the Voltage Controlled Current Source (VCCS) Gain
+        Av = self.x/(self.x**2 + self.r**2)
+        # stamp the VCCS into RE
+        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += Av
+        inputY_r.append(self.to_bus.node_Vr)
+        inputY_c.append(self.to_bus.node_Vi)
+        inputY_val.append(Av)
+        
+        #inputY[self.to_bus.node_Vr,self.from_bus.node_Vi] += -Av
+        inputY_r.append(self.to_bus.node_Vr)
+        inputY_c.append(self.from_bus.node_Vi)
+        inputY_val.append(-Av)
+        
+        #inputY[self.from_bus.node_Vr,self.to_bus.node_Vi] += -Av
+        inputY_r.append(self.from_bus.node_Vr)
+        inputY_c.append(self.to_bus.node_Vi)
+        inputY_val.append(-Av)
+        
+        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += Av
+        inputY_r.append(self.from_bus.node_Vr)
+        inputY_c.append(self.from_bus.node_Vi)
+        inputY_val.append(Av)
+        
+        
+        # stamp the VCCS into IM
+        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += -Av
+        inputY_r.append(self.to_bus.node_Vi)
+        inputY_c.append(self.to_bus.node_Vr)
+        inputY_val.append(-Av)
+        
+        #inputY[self.to_bus.node_Vi,self.from_bus.node_Vr] += Av
+        inputY_r.append(self.to_bus.node_Vi)
+        inputY_c.append(self.from_bus.node_Vr)
+        inputY_val.append(Av)
+        
+        #inputY[self.from_bus.node_Vi,self.to_bus.node_Vr] += Av
+        inputY_r.append(self.from_bus.node_Vi)
+        inputY_c.append(self.to_bus.node_Vr)
+        inputY_val.append(Av)
+        
+        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += -Av
+        inputY_r.append(self.from_bus.node_Vi)
+        inputY_c.append(self.from_bus.node_Vr)
+        inputY_val.append(-Av)
+        
+        
+        # get the splitting current (VCCS) gain
+        Av2 = self.b/2
+        # it references ground therefore only one stamp in RE & 1 in IM
+        # from node shunt
+        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += -Av2
+        inputY_r.append(self.from_bus.node_Vr)
+        inputY_c.append(self.from_bus.node_Vi)
+        inputY_val.append(-Av2)
+        
+        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += Av2
+        inputY_r.append(self.from_bus.node_Vi)
+        inputY_c.append(self.from_bus.node_Vr)
+        inputY_val.append(Av2)
+        
+        # to node shunt
+        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += -Av2
+        inputY_r.append(self.to_bus.node_Vr)
+        inputY_c.append(self.to_bus.node_Vi)
+        inputY_val.append(-Av2)
+        
+        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += Av2
+        inputY_r.append(self.to_bus.node_Vi)
+        inputY_c.append(self.to_bus.node_Vr)
+        inputY_val.append(Av2)
         
         return
         

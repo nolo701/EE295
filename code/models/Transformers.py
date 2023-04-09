@@ -53,6 +53,25 @@ class Transformers:
         self.to_bus = bus_vec[self.to_bus_id-1]    
     
     def assign_nodes(self):
+        # Real - From 1
+        self.vs_re_from_1 = Buses._node_index.__next__()
+        # Imag - From 1
+        self.vs_im_from_1 = Buses._node_index.__next__()
+        # Real - From (V1R)
+        self.node_re_from = Buses._node_index.__next__()
+        # Imag - From (V1I)
+        self.node_im_from = Buses._node_index.__next__()
+        # Real - From 2
+        self.vs_re_from_2 = Buses._node_index.__next__()       
+        # Imag - From 2
+        self.vs_im_from_2 = Buses._node_index.__next__()
+        # Real - To (V2R)
+        self.node_re_to = Buses._node_index.__next__()
+        # Imag - To (V2I)
+        self.node_im_to = Buses._node_index.__next__()
+        
+    
+    def assign_nodes1(self):
         # Create the 4 equations for the Voltage-Controlled Voltage-Sources
         # Real - From 1
         self.vs_re_from_1 = Buses._node_index.__next__()
@@ -73,10 +92,11 @@ class Transformers:
         # Imag - To (V2I)
         self.node_im_to = Buses._node_index.__next__()
         
-    def stamp_dense(self, inputY_test):
+        
+    def stamp_dense(self, inputY):
         # Stamp VCVS RE-From 1
         # "Gain" of the source
-        inputY = 0*np.copy(inputY_test)
+        #inputY = 0*np.copy(inputY_test)
         
         Av = self.tr * np.cos(self.ang)
         # Set the location voltage drop

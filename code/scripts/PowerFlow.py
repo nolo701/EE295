@@ -63,7 +63,7 @@ class PowerFlow:
                 pass
             else:
                 ele.stamp_dense(inputY) 
-                
+       
         for ele in inputTransformer:
             if self.sparse == True:
                 #ele.stamp_sparse(Y, J, v_prev)
@@ -75,8 +75,6 @@ class PowerFlow:
 
     def stamp_nonlinear(self, v_prev, inputGenerator, inputLoad):
         # Set all values to zero
-        #inputY = 0 * inputY
-        #inputJ = 0 * inputJ
         if self.sparse == True:
             Y = np.zeros((1,3))
             J = np.zeros((1,3))
@@ -207,4 +205,4 @@ class PowerFlow:
         print(NR_count)
         print(v_sol)
         
-        return v
+        return v_sol
