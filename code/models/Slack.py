@@ -65,37 +65,37 @@ class Slack:
         
         return
     
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val):
+    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val):
         # stamp RE into y
         #inputY[self.bus.node_Vr,self.node_Vr_Slack] += 1
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.node_Vr_Slack)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.node_Vr_Slack)
+        inputY_val = np.append(inputY_val,1)
         
         #inputY[self.node_Vr_Slack,self.bus.node_Vr] += 1
-        inputY_r.append(self.node_Vr_Slack)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.node_Vr_Slack)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,1)
         
         # stamp IM into y
         #inputY[self.bus.node_Vi,self.node_Vi_Slack] += 1
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.node_Vi_Slack)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.node_Vi_Slack)
+        inputY_val = np.append(inputY_val,1)
         
         #inputY[self.node_Vi_Slack,self.bus.node_Vi] += 1
-        inputY_r.append(self.node_Vi_Slack)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.node_Vi_Slack)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,1)
         
         # stamp RE into J
         #inputJ[self.node_Vr_Slack] += self.Vr_set
-        inputJ_r.append(self.node_Vr_Slack)
-        inputJ_val.append(self.Vr_set)
+        inputJ_r = np.append(inputJ_r,self.node_Vr_Slack)
+        inputJ_val = np.append(inputJ_val,self.Vr_set)
         
         # stamp IM into J
         #inputJ[self.node_Vi_Slack] += self.Vi_set
-        inputJ_r.append(self.node_Vi_Slack)
-        inputJ_val.append(self.Vi_set)
+        inputJ_r = np.append(inputJ_r,self.node_Vi_Slack)
+        inputJ_val = np.append(inputJ_val,self.Vi_set)
         
-        return
+        return inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val

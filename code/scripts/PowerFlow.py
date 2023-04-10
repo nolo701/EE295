@@ -36,14 +36,31 @@ class PowerFlow:
     
     def solve_sparse(self, Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r,
                      Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol):
-        Y_r = Y_lin_r.append(Y_nonlin_r)
-        Y_c = Y_lin_c.append(Y_nonlin_c)
-        Y_val = Y_lin_val.append(Y_nonlin_val)
-        J_r = J_lin_r.append(J_nonlin_r)
-        J_val = J_lin_val.append(J_nonlin_val)
-        Y = sparse.csr_matrix(Y_val,(Y_r,Y_c))
-        J = sparse.csr_matrix(J_val,(J_r,1))
-        sol = np.array(sparse.linalg.spsolve(Y,J.astype(np.float64)))
+        
+        Y_r = np.append(Y_lin_r, Y_nonlin_r).flatten()
+        #Y_r = np.resize(Y_r, [len(Y_r),1])
+        Y_c = np.append(Y_lin_c, Y_nonlin_c).flatten()
+        #Y_c = np.resize(Y_c, [len(Y_c),1])
+        Y_val = np.append(Y_lin_val, Y_nonlin_val).flatten()
+        #Y_val = np.resize(Y_val, [len(Y_val),1])
+        
+        J_r = np.append(J_lin_r, J_nonlin_r).flatten()
+        #J_r = np.resize(J_r, [len(J_r),1])
+        J_val = np.append(J_lin_val, J_nonlin_val).flatten()
+        #J_val = np.resize(J_val, [len(J_val),1])
+        
+        J_c = np.zeros([len(J_r),1]).flatten()
+        '''
+        Y = sparse.csr_matrix((np.asarray(Y_val, dtype=np.float64),
+                               np.asarray(Y_r),np.asarray(Y_c)),
+                                shape = (self.size_Y, self.size_Y))
+        '''
+        Y = sparse.csr_matrix((Y_val, (Y_r, Y_c)), 
+                          shape = (self.size_Y, self.size_Y))
+        J = sparse.csr_matrix((J_val, (J_r, J_c)), 
+                          shape = (self.size_Y, 1))
+        #J = sparse.csr_matrix(J_val,(J_r,1))
+        sol = np.array(sparse.linalg.spsolve(Y,J))
 
         return sol
 
@@ -71,25 +88,25 @@ class PowerFlow:
         
         for ele in inputBranch:
             if self.sparse == True:
-                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
+                Y_lin_r, Y_lin_c, Y_lin_val = ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
             else:
                 ele.stamp_dense(Y_lin)
         for ele in inputSlack:
             if self.sparse == True:
-                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val)
+                Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val = ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val)
             else:
                 ele.stamp_dense(Y_lin, J_lin) 
                 
         for ele in inputShunt:
             if self.sparse == True:
-                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
+                Y_lin_r, Y_lin_c, Y_lin_val = ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
                 pass
             else:
                 ele.stamp_dense(Y_lin) 
        
         for ele in inputTransformer:
             if self.sparse == True:
-                ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
+                Y_lin_r, Y_lin_c, Y_lin_val = ele.stamp_sparse(Y_lin_r, Y_lin_c, Y_lin_val)
                 pass
             else:
                 ele.stamp_dense(Y_lin) 
@@ -116,13 +133,13 @@ class PowerFlow:
             
         for ele in inputGenerator:
             if self.sparse == True:
-                ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
+                Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val = ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
             else:
                 ele.stamp_dense(Y, J, v_prev) 
                 
         for ele in inputLoad:
             if self.sparse == True:
-                ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
+                Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val = ele.stamp_sparse(Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_prev)
             else:
                 ele.stamp_dense(Y, J, v_prev)
                 
@@ -191,19 +208,20 @@ class PowerFlow:
             # TODO: PART 1, STEP 2.4 - Complete the stamp_nonlinear function which stamps all nonlinear power grid
             #  elements. This function should call the stamp_nonlinear function of each nonlinear element and return
             #  an updated Y matrix. You need to decide the input arguments and return values.
-            if self.sparse == True:
-                Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val = self.stamp_nonlinear(v_sol, generator, load)
-                v_sol_next = self.solve_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol)
-            else:
-                Y_nonlin, J_nonlin = self.stamp_linear(branch,slack,shunt,transformer)
-                v_sol_next = self.solve_dense(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
+            
 
             # # # Solve The System # # #
             # TODO: PART 1, STEP 2.5 - Complete the solve function which solves system of equations Yv = J. The
             #  function should return a new v_sol.
             #  You need to decide the input arguments and return values.
-            v_sol_next = self.solve(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
-           
+            #v_sol_next = self.solve(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
+            if self.sparse == True:
+               Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val = self.stamp_nonlinear(v_sol, generator, load)
+               v_sol_next = self.solve_sparse(Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r, Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol)
+               v_sol_next = np.reshape(v_sol_next, [len(v_sol_next),1])
+            else:
+               Y_nonlin, J_nonlin = self.stamp_nonlinear(v_sol, generator, load)
+               v_sol_next = self.solve_dense(Y_lin, J_lin, Y_nonlin, J_nonlin, v_sol)
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 1, STEP 2.6 - Finish the check_error function which calculates the maximum error, err_max
             #  You need to decide the input arguments and return values.

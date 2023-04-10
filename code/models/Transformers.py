@@ -185,57 +185,57 @@ class Transformers:
         Av = self.tr * np.cos(self.ang)
         # Set the location voltage drop
         #inputY[self.from_bus.node_Vr, self.vs_re_from_1] += 1
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.from_bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.vs_re_from_1)
+        inputY_val = np.append(inputY_val,1)
         
         #inputY[self.node_re_from, self.vs_re_from_1] += -1
-        inputY_r.append(self.node_re_from)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(-1)
+        inputY_r = np.append(inputY_r,self.node_re_from)
+        inputY_c = np.append(inputY_c,self.vs_re_from_1)
+        inputY_val = np.append(inputY_val,-1)
         
         # Set the voltage value from KVL
         # + Terminal
         #inputY[self.vs_re_from_1, self.from_bus.node_Vr] += 1
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.vs_re_from_1)
+        inputY_c = np.append(inputY_c,self.from_bus.node_Vr)
+        inputY_val = np.append(inputY_val,1)
         
         # - Terminal
         #inputY[self.vs_re_from_1, self.node_re_from] += -1
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.node_re_from)
-        inputY_val.append(-1)
+        inputY_r = np.append(inputY_r,self.vs_re_from_1)
+        inputY_c = np.append(inputY_c,self.node_re_from)
+        inputY_val = np.append(inputY_val,-1)
         
         # + Referenced Terminal
         #inputY[self.vs_re_from_1, self.node_re_to] += -Av
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.vs_re_from_1)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         # Stamp VCVS RE-From 2
         # "Gain" of the source
         Av = -1 * self.tr * np.sin(self.ang)
         # Set the location voltage drop
         #inputY[self.node_re_from, self.vs_re_from_2] += 1
-        inputY_r.append(self.node_re_from)
-        inputY_c.append(self.vs_re_from_2)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.node_re_from)
+        inputY_c = np.append(inputY_c,self.vs_re_from_2)
+        inputY_val = np.append(inputY_val,1)
         
         # Set the voltage value from KVL
         # + Terminal
         #inputY[self.vs_re_from_2, self.node_re_from] += 1
-        inputY_r.append(self.vs_re_from_2)
-        inputY_c.append(self.node_re_from)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.vs_re_from_2)
+        inputY_c = np.append(inputY_c,self.node_re_from)
+        inputY_val = np.append(inputY_val,1)
         
         # - Terminal (grounded)
         #inputY[self.vs_re_from_2, self.node_re_from] += -1
         # + Referenced Terminal
         #inputY[self.vs_re_from_2, self.node_im_to] += -Av
-        inputY_r.append(self.vs_re_from_2)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.vs_re_from_2)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         
         # Stamp VCVS IM-From 1
@@ -243,33 +243,33 @@ class Transformers:
         Av = self.tr * np.sin(self.ang)
         # Set the location voltage drop
         #inputY[self.from_bus.node_Vi, self.vs_im_from_1] += 1
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.from_bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.vs_im_from_1)
+        inputY_val = np.append(inputY_val,1)
         
         #inputY[self.node_im_from, self.vs_im_from_1] += -1
-        inputY_r.append(self.node_im_from)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(-1)
+        inputY_r = np.append(inputY_r,self.node_im_from)
+        inputY_c = np.append(inputY_c,self.vs_im_from_1)
+        inputY_val = np.append(inputY_val,-1)
         
         # Set the voltage value from KVL
         # + Terminal
         #inputY[self.vs_im_from_1, self.from_bus.node_Vi] += 1
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.vs_im_from_1)
+        inputY_c = np.append(inputY_c,self.from_bus.node_Vi)
+        inputY_val = np.append(inputY_val,1)
         
         # - Terminal
         #inputY[self.vs_im_from_1, self.node_im_from] += -1
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.node_im_from)
-        inputY_val.append(-1)
+        inputY_r = np.append(inputY_r,self.vs_im_from_1)
+        inputY_c = np.append(inputY_c,self.node_im_from)
+        inputY_val = np.append(inputY_val,-1)
         
         # + Referenced Terminal
         #inputY[self.vs_im_from_1, self.node_re_to] += -Av
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.vs_im_from_1)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         
         # Stamp VCVS IM-From 2
@@ -277,24 +277,24 @@ class Transformers:
         Av = self.tr * np.cos(self.ang)
         # Set the location voltage drop
         #inputY[self.node_im_from, self.vs_im_from_2] += 1
-        inputY_r.append(self.node_im_from)
-        inputY_c.append(self.vs_im_from_2)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.node_im_from)
+        inputY_c = np.append(inputY_c,self.vs_im_from_2)
+        inputY_val = np.append(inputY_val,1)
         
         # Set the voltage value from KVL
         # + Terminal
         #inputY[self.vs_im_from_2, self.node_im_from] += 1
-        inputY_r.append(self.vs_im_from_2)
-        inputY_c.append(self.node_im_from)
-        inputY_val.append(1)
+        inputY_r = np.append(inputY_r,self.vs_im_from_2)
+        inputY_c = np.append(inputY_c,self.node_im_from)
+        inputY_val = np.append(inputY_val,1)
         
         # - Terminal (grounded)
         #inputY[self.vs_re_from_2, self.node_re_from] += -1
         # + Referenced Terminal
         #inputY[self.vs_im_from_2, self.node_im_to] += -Av
-        inputY_r.append(self.vs_im_from_2)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.vs_im_from_2)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         
         # Stamp Current Controlled Current Sources on the To-Side
@@ -302,123 +302,123 @@ class Transformers:
         # Current "Gain"
         Av = -1 * self.tr * np.cos(self.ang)
         #inputY[self.node_re_to, self.vs_re_from_1] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.vs_re_from_1)
+        inputY_val = np.append(inputY_val,Av)
         
         # Stamp CCCS RE-TO: ref I1IM
         # Current "Gain"
         Av = -1 * self.tr * np.sin(self.ang)
         #inputY[self.node_re_to, self.vs_im_from_1] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.vs_im_from_1)
+        inputY_val = np.append(inputY_val,Av)
         
         # Stamp CCCS IM-TO: ref I1RE
         # Current "Gain"
         Av = self.tr * np.sin(self.ang)
         #inputY[self.node_im_to, self.vs_re_from_1] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.vs_re_from_1)
+        inputY_val = np.append(inputY_val,Av)
         
         # Stamp CCCS IM-TO: ref I1IM
         # Current "Gain"
         Av = -1 * self.tr * np.cos(self.ang)
         #inputY[self.node_im_to, self.vs_im_from_1] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.vs_im_from_1)
+        inputY_val = np.append(inputY_val,Av)
         
         # Stamp the psuedo branch that acts as as loss
         # Stamp the VCCS in the RE
         Av = self.x/(self.r**2+self.x**2)
         #inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append( Av)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
+        inputY_val = np.append(inputY_val, Av)
         
         #inputY[self.node_re_to, self.to_bus.node_Vi] += -Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
+        inputY_val = np.append(inputY_val,-Av)
         
         #inputY[self.to_bus.node_Vr, self.node_im_to] += -Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         #inputY[self.node_re_to, self.node_im_to] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,Av)
         
         
         # Stamp the conductance in the RE
         G = self.r/(self.r**2+self.x**2)
         #inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(G)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
+        inputY_val = np.append(inputY_val,G)
         
         #inputY[self.to_bus.node_Vr, self.node_re_to] += -G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-G)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,-G)
         
         #inputY[self.node_re_to,self.to_bus.node_Vr] += -G
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-G)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
+        inputY_val = np.append(inputY_val,-G)
         
         #inputY[self.node_re_to,self.node_re_to] += G
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(G)
+        inputY_r = np.append(inputY_r,self.node_re_to)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,G)
         
         # Stamp the VCCS in the IM
         Av = -1*self.x/(self.r**2+self.x**2)
         #inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
+        inputY_val = np.append(inputY_val,Av)
         
         #inputY[self.to_bus.node_Vi, self.node_re_to] += -Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,-Av)
         
         #inputY[self.node_im_to, self.to_bus.node_Vr] += -Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-Av)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
+        inputY_val = np.append(inputY_val,-Av)
         
         #inputY[self.node_im_to, self.node_re_to] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(Av)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.node_re_to)
+        inputY_val = np.append(inputY_val,Av)
         
         
         # Stamp the conductance in the RE 
         G = self.r/(self.r**2+self.x**2)
         #inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(G)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
+        inputY_val = np.append(inputY_val,G)
         
         #inputY[self.to_bus.node_Vi, self.node_im_to] += -G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-G)
+        inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,-G)
         
         #inputY[self.node_im_to,self.to_bus.node_Vi] += -G
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-G)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
+        inputY_val = np.append(inputY_val,-G)
         
         #inputY[self.node_im_to,self.node_im_to] += G
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(G)
+        inputY_r = np.append(inputY_r,self.node_im_to)
+        inputY_c = np.append(inputY_c,self.node_im_to)
+        inputY_val = np.append(inputY_val,G)
         
-        return
+        return inputY_r, inputY_c, inputY_val

@@ -1,7 +1,7 @@
 from __future__ import division
 from itertools import count
 from scripts.global_vars import global_vars
-
+import numpy as np
 
 class Generators:
     _ids = count(0)
@@ -116,7 +116,7 @@ class Generators:
             
         return
     
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val, prev_sol):
+    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val, prev_sol):
         # grab values used to evaluate the functions
         P = -self.P
         Vr = prev_sol[self.bus.node_Vr]
@@ -135,26 +135,26 @@ class Generators:
         Vr_gen = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi - dIrg_wrt_Q*Q
         # stamp the conductance
         #inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIrg_wrt_Vr)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,dIrg_wrt_Vr)
         
         # stamp the VCCS
         #inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIrg_wrt_Vi)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,dIrg_wrt_Vi)
         
         # stamp the extra var
         #inputY[self.bus.node_Vr, self.bus.node_Q] += dIrg_wrt_Q
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Q)
-        inputY_val.append(dIrg_wrt_Q)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.bus.node_Q)
+        inputY_val = np.append(inputY_val,dIrg_wrt_Q)
         
         # stamp the CCS
         #inputJ[self.bus.node_Vr] += -Vr_gen
-        inputJ_r.append(self.bus.node_Vr)
-        inputJ_val.append(-Vr_gen)
+        inputJ_r = np.append(inputJ_r,self.bus.node_Vr)
+        inputJ_val = np.append(inputJ_val,-Vr_gen)
         
         # Constant Current source of IM
         # evaluate the functions to get info to stamp the constant current source
@@ -166,26 +166,26 @@ class Generators:
         Vi_gen = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi - dIig_wrt_Q*Q
         # stamp the conductance
         #inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIig_wrt_Vr)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,dIig_wrt_Vr)
         
         # stamp the VCCS
         #inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIig_wrt_Vi)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,dIig_wrt_Vi)
         
         # stamp the extra var
         #inputY[self.bus.node_Vi, self.bus.node_Q] += dIig_wrt_Q
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Q)
-        inputY_val.append(dIig_wrt_Q)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.bus.node_Q)
+        inputY_val = np.append(inputY_val,dIig_wrt_Q)
         
         # stamp the CCS
         #inputJ[self.bus.node_Vi] += -Vi_gen
-        inputJ_r.append(self.bus.node_Vi)
-        inputJ_val.append(-Vi_gen)
+        inputJ_r = np.append(inputJ_r,self.bus.node_Vi)
+        inputJ_val = np.append(inputJ_val,-Vi_gen)
         
         # Apply the VSet constraint (not a circuit element but required for coupling)
         Vset_prev = self.Vset**2 - Vr**2 - Vi**2
@@ -194,18 +194,18 @@ class Generators:
         Vset_gen = -Vset_prev - dVset_wrt_Vi*Vi - dVset_wrt_Vr*Vr
         # stamp them
         #inputY[self.bus.node_Q, self.bus.node_Vr] += dVset_wrt_Vr
-        inputY_r.append(self.bus.node_Q)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dVset_wrt_Vr)
+        inputY_r = np.append(inputY_r,self.bus.node_Q)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,dVset_wrt_Vr)
         
         #inputY[self.bus.node_Q, self.bus.node_Vi] += dVset_wrt_Vi
-        inputY_r.append(self.bus.node_Q)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dVset_wrt_Vi)
+        inputY_r = np.append(inputY_r,self.bus.node_Q)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,dVset_wrt_Vi)
         
         #inputJ[self.bus.node_Q] += -Vset_gen
-        inputJ_r.append(self.bus.node_Q)
-        inputJ_val.append(-Vset_gen)
+        inputJ_r = np.append(inputJ_r,self.bus.node_Q)
+        inputJ_val = np.append(inputJ_val,-Vset_gen)
         
-        return
+        return inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val
     

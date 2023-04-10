@@ -1,6 +1,6 @@
 from __future__ import division
 from itertools import count
-
+import numpy as np
 
 class Loads:
     _ids = count(0)
@@ -88,7 +88,7 @@ class Loads:
 
         return
         
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_c, inputJ_val, prev_sol):
+    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val, prev_sol):
         # grab values used to evaluate the functions
         P = self.P
         Vr = prev_sol[self.bus.node_Vr]
@@ -107,20 +107,20 @@ class Loads:
         Vr_load = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi
         # stamp the conductance
         #inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIrg_wrt_Vr)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,dIrg_wrt_Vr)
         
         # stamp the VCCS
         #inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIrg_wrt_Vi)
+        inputY_r = np.append(inputY_r,self.bus.node_Vr)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,dIrg_wrt_Vi)
         
         # stamp the CCS
         #inputJ[self.bus.node_Vr] += -Vr_load
-        inputJ_r.append(self.bus.node_Vr)
-        inputJ_val.append(-Vr_load)
+        inputJ_r = np.append(inputJ_r,self.bus.node_Vr)
+        inputJ_val = np.append(inputJ_val,-Vr_load)
         
         # Constant Current source of IM
         # evaluate the functions to get info to stamp the constant current source
@@ -132,20 +132,20 @@ class Loads:
         Vi_load = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi
         # stamp the conductance
         #inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIig_wrt_Vr)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.bus.node_Vr)
+        inputY_val = np.append(inputY_val,dIig_wrt_Vr)
         
         # stamp the VCCS
         #inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIig_wrt_Vi)
+        inputY_r = np.append(inputY_r,self.bus.node_Vi)
+        inputY_c = np.append(inputY_c,self.bus.node_Vi)
+        inputY_val = np.append(inputY_val,dIig_wrt_Vi)
         
         # stamp the CCS
         #inputJ[self.bus.node_Vi] += -Vi_load
-        inputJ_r.append(self.bus.node_Vi)
-        inputJ_val.append(-Vi_load)
+        inputJ_r = np.append(inputJ_r,self.bus.node_Vi)
+        inputJ_val = np.append(inputJ_val,-Vi_load)
         
         
-        return
+        return inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val
