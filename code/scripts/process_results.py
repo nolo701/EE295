@@ -6,6 +6,8 @@ import numpy as np
 def process_results(v_sol, buses):
     numBuses = len(buses)
     # Create a table to convert the rectangular for each bus to polar
+    # get each variable name as well as the final value
+    
     polar = np.zeros([numBuses+1,5])
     # assign the first row as string headers
     i = 0;
