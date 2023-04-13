@@ -47,7 +47,6 @@ class Slack:
     def assign_buses(self, bus_vec):
         self.bus = bus_vec[self.bus_id-1]
 
-        
         return
     # You should also add some other class functions you deem necessary for stamping,
     # initializing, and processing results.

@@ -253,3 +253,81 @@ class PowerFlow:
         else:
             converge = False
         return v_sol,converge
+    
+    
+    def tx_init(self, slack, generator):
+        v_init = np.zeros((self.size_Y,1))  # create a solution vector filled with zeros of size_Y
+        # Set the nodes of each slack or generator
+        for ele in generator:
+            #Slack or PQ Bus
+            v_init[ele.node_Vr] = np.sqrt(2)/2 * ele.Vset
+            v_init[ele.node_Vi] = np.sqrt(2)/2 * ele.Vset
+            if ele.Type == 2:
+                v_init[ele.node_Q] = 1e-1
+        for ele in slack:
+            # PV Bus
+            v_init[ele.node_Vr_Slack] = np.sqrt(2)/2 * ele.Vset
+            v_init[ele.node_Vi_Slack] = np.sqrt(2)/2 * ele.Vset
+            
+        return v_init
+    
+    def run_tx_stepping(self, SETTINGS, bus, slack, generator, transformer, branch, shunt, load ):
+        # Read other TX settings to create the starting V & Gamma
+        tx_step = 1
+        v_init = self.tx_init(slack, generator)
+        # Create the TX Branches as copy of branch
+        tx_branch = branch.copy()
+        # Create the TX Transformers as copy of transformer
+        tx_transformer = transformer.copy()
+        tx_converged = False
+        # Magnitude to decrease losses
+        tx_gamma = SETTINGS["TX-scaling"]
+        # While it has yet to converge try and make it even smaller
+        while (tx_converged == False) and (tx_step <= SETTINGS["TX-max_steps"]):
+            # tx_v will shrink exponentially according to agressiveness
+            # a larger value a more agressive shrink
+            tx_v = 1 - ((100 - SETTINGS["TX-agressiveness"])/100)**tx_step
+            
+            
+            for ele in tx_branch:
+                ele.set_tx(tx_v, tx_gamma)
+            
+            for ele in tx_transformer:
+                ele.set_tx(tx_v, tx_gamma)
+            
+            # Run a power flow with shorted values
+            tx_sol, tx_success = self.run_powerflow(v_init, bus, slack, generator, tx_transformer, tx_branch, shunt, load)
+            if tx_success == False:
+                tx_step += 1
+            else:
+                tx_converged = True
+        if tx_converged:
+            # With a converged trivial solution try and step it up to original
+            recover = False
+            recover_step = 1
+            recover_sol = np.copy(tx_sol)
+            tx_v_sol = tx_v
+            step_lin = (1- tx_v_sol)/SETTINGS["TX-max_steps"]
+            while (recover == False) and (recover_step <= SETTINGS["TX-max_steps"]):
+                # tx_v will recover from the converged point linearly in max steps steps
+                # a larger value a more agressive shrink
+                tx_v = tx_v_sol + recover_step*step_lin
+    
+                # Refresh the values
+                for ele in tx_branch:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                for ele in tx_transformer:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                # Run a power flow with increas
+                recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, tx_transformer, tx_branch, shunt, load)
+                if recover == False:
+                    recover_step += 1
+                
+        if recover:
+            return recover_sol, recover
+        
+        return None, recover
+        
+    

@@ -13,9 +13,9 @@ settings = {
     "Sparse": True,
     "case_name": casename,
     "TX-Homotopy": False,
-    "TX-max steps": 5,
-    "TX-agressiveness": .75, # smaller decimal means it will move faster
-    "TX-scaling": 10 # smaller decimal means it will move faster
+    "TX-max_steps": 5,
+    "TX-agressiveness": 5, # % loss per tx step
+    "TX-scaling": 10 #(Gamma) smaller decimal means it will move faster
     
 }
 

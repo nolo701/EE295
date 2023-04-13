@@ -91,21 +91,10 @@ def solve(TESTCASE, SETTINGS):
         if success == False:
             # Start to implement TX stepping to create better initial conditions
             if SETTINGS["TX-Homotopy"]==True:
-                # Read other TX settings to create the starting V & Gamma
-                tx_step = 1
+                # Create the init for tx step
+                vinit = powerflow.init_tx(slack, generator)
+                v,success = powerflow.run_tx_stepping(SETTINGS, vinit, bus, slack, generator, transformer, branch, shunt, load)
                 
-                
-                tx_v = SETTINGS["TX-agressiveness"]**tx_step
-                tx_gamma = SETTINGS["TX-scaling"]
-                # Create the TX Branches as copy of branch
-                tx_branch = branch.copy()
-                for ele in tx_branch:
-                    ele.set_tx(tx_v, tx_gamma)
-                
-                # Create the TX Transformers as copy of transformer
-                tx_transformer = transformer.copy()
-                for ele in tx_transformer:
-                    ele.set_tx(tx_v, tx_gamma)
                 
                 
                 
