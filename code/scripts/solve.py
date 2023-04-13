@@ -67,12 +67,14 @@ def solve(TESTCASE, SETTINGS):
         ele.assign_nodes()
         ele.assign_buses(bus)
 
-    # # # Initialize Solution Vector - V and Q values # # #
-
     # determine the size of the Y matrix by looking at the total number of nodes in the system
     size_Y = Buses._node_index.__next__()
 
     # TODO: PART 1, STEP 1 - Complete the function to initialize your solution vector v_init.
+    # If TX stepping is desired try to solve 
+    if SETTINGS["TX-Homotopy"] == True:
+        pass
+        
     v_init = np.zeros((size_Y,1))  # create a solution vector filled with zeros of size_Y
     v_init = initialize(v_init,bus,slack)
 
@@ -84,8 +86,31 @@ def solve(TESTCASE, SETTINGS):
     #  condition once you've finished building your solver.
     run_pf = True
     if run_pf:
-        v = powerflow.run_powerflow(v_init, bus, slack, generator, transformer, branch, shunt, load)
-    
+        v,success = powerflow.run_powerflow(v_init, bus, slack, generator, transformer, branch, shunt, load)
+        # Check if a homotopy method is needed
+        if success == False:
+            # Start to implement TX stepping to create better initial conditions
+            if SETTINGS["TX-Homotopy"]==True:
+                # Read other TX settings to create the starting V & Gamma
+                tx_step = 1
+                
+                
+                tx_v = SETTINGS["TX-agressiveness"]**tx_step
+                tx_gamma = SETTINGS["TX-scaling"]
+                # Create the TX Branches as copy of branch
+                tx_branch = branch.copy()
+                for ele in tx_branch:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                # Create the TX Transformers as copy of transformer
+                tx_transformer = transformer.copy()
+                for ele in tx_transformer:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                
+                
+                
+                
     # # # Process Results # # #
     # TODO: PART 1, STEP 3 - Write a process_results function to compute the relevant results (voltages, powers,
     #  and anything else of interest) and find the voltage profile (maximum and minimum voltages in the case).

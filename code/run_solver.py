@@ -11,7 +11,12 @@ settings = {
     "Max Iters": 50,
     "Limiting":  False,
     "Sparse": True,
-    "case_name": casename
+    "case_name": casename,
+    "TX-Homotopy": False,
+    "TX-max steps": 5,
+    "TX-agressiveness": .75, # smaller decimal means it will move faster
+    "TX-scaling": 10 # smaller decimal means it will move faster
+    
 }
 
 # run the solver

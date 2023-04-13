@@ -39,6 +39,8 @@ class Branches:
         self.rateA = rateA
         self.rateB = rateB
         self.rateC = rateC
+        self.tx_v = 0
+        self.tx_gamma = 1
         
         return
         # You will need to implement the remainder of the __init__ function yourself.
@@ -54,6 +56,8 @@ class Branches:
     def stamp_dense(self, inputY):
         # get the series conductance
         G = self.r/(self.r**2 + self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         # stamp the conductance into the RE
         inputY[self.to_bus.node_Vr,self.to_bus.node_Vr] += G
         inputY[self.from_bus.node_Vr,self.from_bus.node_Vr] += G
@@ -67,6 +71,8 @@ class Branches:
         
         # get the Voltage Controlled Current Source (VCCS) Gain
         Av = self.x/(self.x**2 + self.r**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         # stamp the VCCS into RE
         inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += Av
         inputY[self.to_bus.node_Vr,self.from_bus.node_Vi] += -Av
@@ -81,6 +87,8 @@ class Branches:
         
         # get the splitting current (VCCS) gain
         Av2 = self.b/2
+        # Amplify by the TX stepping parameters
+        Av2 = Av2*(1+self.tx_v*self.tx_gamma)
         # it references ground therefore only one stamp in RE & 1 in IM
         # from node shunt
         inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += -Av2
@@ -95,6 +103,8 @@ class Branches:
     def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
         # get the series conductance
         G = self.r/(self.r**2 + self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         # stamp the conductance into the RE
         #inputY[self.to_bus.node_Vr,self.to_bus.node_Vr] += G
         inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
@@ -140,6 +150,8 @@ class Branches:
         
         # get the Voltage Controlled Current Source (VCCS) Gain
         Av = self.x/(self.x**2 + self.r**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         # stamp the VCCS into RE
         #inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += Av
         inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
@@ -186,6 +198,8 @@ class Branches:
         
         # get the splitting current (VCCS) gain
         Av2 = self.b/2
+        # Amplify by the TX stepping parameters
+        Av2 = Av2*(1+self.tx_v*self.tx_gamma)
         # it references ground therefore only one stamp in RE & 1 in IM
         # from node shunt
         #inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += -Av2
@@ -211,7 +225,11 @@ class Branches:
         
         return inputY_r, inputY_c, inputY_val
         
+    def set_tx(self, inputTx_V, inputTx_Gamma):
+        self.tx_v = inputTx_V
+        self.tx_gamma = inputTx_Gamma
         
+        return
         
         
         

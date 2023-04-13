@@ -247,5 +247,9 @@ class PowerFlow:
         print("Final Solution found after inter: ")
         print(NR_count)
         #print(v_sol)
-        
-        return v_sol
+        # determine if the NR converged
+        if (err_max <= tol) and (NR_count <= self.max_iters):
+            converge = True
+        else:
+            converge = False
+        return v_sol,converge

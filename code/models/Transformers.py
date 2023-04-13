@@ -39,10 +39,13 @@ class Transformers:
         self.x = x
         self.status = status
         self.tr = tr
+        self.tr_eff = tr
         self.ang = ang
         self.Gsh_raw = Gsh_raw
         self.Bsh_raw = Bsh_raw
         self.rating = rating
+        self.tx_v = 0
+        self.tx_gamma = 1
 
         # You will need to implement the remainder of the __init__ function yourself.
         # You should also add some other class functions you deem necessary for stamping,
@@ -76,7 +79,7 @@ class Transformers:
         # "Gain" of the source
         #inputY = 0*np.copy(inputY_test)
         
-        Av = self.tr * np.cos(self.ang)
+        Av = self.tr_eff * np.cos(self.ang)
         # Set the location voltage drop
         inputY[self.from_bus.node_Vr, self.vs_re_from_1] += 1
         inputY[self.node_re_from, self.vs_re_from_1] += -1
@@ -90,7 +93,7 @@ class Transformers:
         
         # Stamp VCVS RE-From 2
         # "Gain" of the source
-        Av = -1 * self.tr * np.sin(self.ang)
+        Av = -1 * self.tr_eff * np.sin(self.ang)
         # Set the location voltage drop
         inputY[self.node_re_from, self.vs_re_from_2] += 1
         # Set the voltage value from KVL
@@ -103,7 +106,7 @@ class Transformers:
         
         # Stamp VCVS IM-From 1
         # "Gain" of the source
-        Av = self.tr * np.sin(self.ang)
+        Av = self.tr_eff * np.sin(self.ang)
         # Set the location voltage drop
         inputY[self.from_bus.node_Vi, self.vs_im_from_1] += 1
         inputY[self.node_im_from, self.vs_im_from_1] += -1
@@ -117,7 +120,7 @@ class Transformers:
         
         # Stamp VCVS IM-From 2
         # "Gain" of the source
-        Av = self.tr * np.cos(self.ang)
+        Av = self.tr_eff * np.cos(self.ang)
         # Set the location voltage drop
         inputY[self.node_im_from, self.vs_im_from_2] += 1
         # Set the voltage value from KVL
@@ -131,27 +134,29 @@ class Transformers:
         # Stamp Current Controlled Current Sources on the To-Side
         # Stamp CCCS RE-TO: ref I1RE
         # Current "Gain"
-        Av = -1 * self.tr * np.cos(self.ang)
+        Av = -1 * self.tr_eff * np.cos(self.ang)
         inputY[self.node_re_to, self.vs_re_from_1] += Av
         
         # Stamp CCCS RE-TO: ref I1IM
         # Current "Gain"
-        Av = -1 * self.tr * np.sin(self.ang)
+        Av = -1 * self.tr_eff * np.sin(self.ang)
         inputY[self.node_re_to, self.vs_im_from_1] += Av
         
         # Stamp CCCS IM-TO: ref I1RE
         # Current "Gain"
-        Av = self.tr * np.sin(self.ang)
+        Av = self.tr_eff * np.sin(self.ang)
         inputY[self.node_im_to, self.vs_re_from_1] += Av
         
         # Stamp CCCS IM-TO: ref I1IM
         # Current "Gain"
-        Av = -1 * self.tr * np.cos(self.ang)
+        Av = -1 * self.tr_eff * np.cos(self.ang)
         inputY[self.node_im_to, self.vs_im_from_1] += Av
         
         # Stamp the psuedo branch that acts as as loss
         # Stamp the VCCS in the RE
         Av = self.x/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
         inputY[self.node_re_to, self.to_bus.node_Vi] += -Av
         inputY[self.to_bus.node_Vr, self.node_im_to] += -Av
@@ -159,6 +164,8 @@ class Transformers:
         
         # Stamp the conductance in the RE
         G = self.r/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
         inputY[self.to_bus.node_Vr, self.node_re_to] += -G
         inputY[self.node_re_to,self.to_bus.node_Vr] += -G
@@ -166,6 +173,8 @@ class Transformers:
         
         # Stamp the VCCS in the IM
         Av = -1*self.x/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
         inputY[self.to_bus.node_Vi, self.node_re_to] += -Av
         inputY[self.node_im_to, self.to_bus.node_Vr] += -Av
@@ -173,6 +182,8 @@ class Transformers:
         
         # Stamp the conductance in the RE 
         G = self.r/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
         inputY[self.to_bus.node_Vi, self.node_im_to] += -G
         inputY[self.node_im_to,self.to_bus.node_Vi] += -G
@@ -215,7 +226,7 @@ class Transformers:
         
         # Stamp VCVS RE-From 2
         # "Gain" of the source
-        Av = -1 * self.tr * np.sin(self.ang)
+        Av = -1 * self.tr_eff * np.sin(self.ang)
         # Set the location voltage drop
         #inputY[self.node_re_from, self.vs_re_from_2] += 1
         inputY_r = np.append(inputY_r,self.node_re_from)
@@ -240,7 +251,7 @@ class Transformers:
         
         # Stamp VCVS IM-From 1
         # "Gain" of the source
-        Av = self.tr * np.sin(self.ang)
+        Av = self.tr_eff * np.sin(self.ang)
         # Set the location voltage drop
         #inputY[self.from_bus.node_Vi, self.vs_im_from_1] += 1
         inputY_r = np.append(inputY_r,self.from_bus.node_Vi)
@@ -274,7 +285,7 @@ class Transformers:
         
         # Stamp VCVS IM-From 2
         # "Gain" of the source
-        Av = self.tr * np.cos(self.ang)
+        Av = self.tr_eff * np.cos(self.ang)
         # Set the location voltage drop
         #inputY[self.node_im_from, self.vs_im_from_2] += 1
         inputY_r = np.append(inputY_r,self.node_im_from)
@@ -300,7 +311,7 @@ class Transformers:
         # Stamp Current Controlled Current Sources on the To-Side
         # Stamp CCCS RE-TO: ref I1RE
         # Current "Gain"
-        Av = -1 * self.tr * np.cos(self.ang)
+        Av = -1 * self.tr_eff * np.cos(self.ang)
         #inputY[self.node_re_to, self.vs_re_from_1] += Av
         inputY_r = np.append(inputY_r,self.node_re_to)
         inputY_c = np.append(inputY_c,self.vs_re_from_1)
@@ -308,7 +319,7 @@ class Transformers:
         
         # Stamp CCCS RE-TO: ref I1IM
         # Current "Gain"
-        Av = -1 * self.tr * np.sin(self.ang)
+        Av = -1 * self.tr_eff * np.sin(self.ang)
         #inputY[self.node_re_to, self.vs_im_from_1] += Av
         inputY_r = np.append(inputY_r,self.node_re_to)
         inputY_c = np.append(inputY_c,self.vs_im_from_1)
@@ -316,7 +327,7 @@ class Transformers:
         
         # Stamp CCCS IM-TO: ref I1RE
         # Current "Gain"
-        Av = self.tr * np.sin(self.ang)
+        Av = self.tr_eff * np.sin(self.ang)
         #inputY[self.node_im_to, self.vs_re_from_1] += Av
         inputY_r = np.append(inputY_r,self.node_im_to)
         inputY_c = np.append(inputY_c,self.vs_re_from_1)
@@ -324,7 +335,7 @@ class Transformers:
         
         # Stamp CCCS IM-TO: ref I1IM
         # Current "Gain"
-        Av = -1 * self.tr * np.cos(self.ang)
+        Av = -1 * self.tr_eff * np.cos(self.ang)
         #inputY[self.node_im_to, self.vs_im_from_1] += Av
         inputY_r = np.append(inputY_r,self.node_im_to)
         inputY_c = np.append(inputY_c,self.vs_im_from_1)
@@ -333,6 +344,8 @@ class Transformers:
         # Stamp the psuedo branch that acts as as loss
         # Stamp the VCCS in the RE
         Av = self.x/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         #inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
         inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
         inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
@@ -356,6 +369,8 @@ class Transformers:
         
         # Stamp the conductance in the RE
         G = self.r/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         #inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
         inputY_r = np.append(inputY_r,self.to_bus.node_Vr)
         inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
@@ -378,6 +393,8 @@ class Transformers:
         
         # Stamp the VCCS in the IM
         Av = -1*self.x/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        Av = Av*(1+self.tx_v*self.tx_gamma)
         #inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
         inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
         inputY_c = np.append(inputY_c,self.to_bus.node_Vr)
@@ -401,6 +418,8 @@ class Transformers:
         
         # Stamp the conductance in the RE 
         G = self.r/(self.r**2+self.x**2)
+        # Amplify by the TX stepping parameters
+        G = G*(1+self.tx_v*self.tx_gamma)
         #inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
         inputY_r = np.append(inputY_r,self.to_bus.node_Vi)
         inputY_c = np.append(inputY_c,self.to_bus.node_Vi)
@@ -422,3 +441,11 @@ class Transformers:
         inputY_val = np.append(inputY_val,G)
         
         return inputY_r, inputY_c, inputY_val
+    
+    def set_tx(self, inputTx_V, inputTx_Gamma):
+        self.tx_v = inputTx_V
+        self.tx_gamma = inputTx_Gamma
+        # update the effective turn ratio
+        self.tr_eff = (1-self.tr)*self.tx_v + self.tr
+        
+        return
