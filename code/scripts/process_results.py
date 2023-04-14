@@ -59,8 +59,9 @@ def process_results(v_sol, buses):
     data_df = pd.DataFrame(polar)
     writer = pd.ExcelWriter("Polar_Results.xlsx")
     data_df.to_excel(writer,float_format="%.4f")
-    print("Maximum voltage at bus: {} with {} p.u @ {} deg".format(maxVBusid,polar[maxV_idx,3],polar[maxV_idx,4]))
-    print("Minimum voltage at bus: {} with {} p.u @ {} deg".format(minVBusid,polar[minV_idx,3],polar[minV_idx,4]))
-    print("Maximum Angle at bus: {} with {} p.u @ {} deg".format(maxAngBusid,polar[maxAng_idx,3],polar[maxAng_idx,4]))
-    print("Minimum Angle at bus: {} with {} p.u @ {} deg".format(minAngBusid,polar[minAng_idx,3],polar[minAng_idx,4]))
+    print("Minimum voltage at bus: {:.3f} with {:.3f} p.u @ {:.3f} deg".format(minVBusid,polar[minV_idx,3],polar[minV_idx,4]))
+    print("Maximum voltage at bus: {:.3f} with {:.3f} p.u @ {:.3f} deg".format(maxVBusid,polar[maxV_idx,3],polar[maxV_idx,4]))
+    print("Minimum Angle at bus: {:.3f} with {:.3f} p.u @ {:.3f} deg".format(minAngBusid,polar[minAng_idx,3],polar[minAng_idx,4]))
+    print("Maximum Angle at bus: {:.3f} with {:.3f} p.u @ {:.3f} deg".format(maxAngBusid,polar[maxAng_idx,3],polar[maxAng_idx,4]))
+    
     pass
