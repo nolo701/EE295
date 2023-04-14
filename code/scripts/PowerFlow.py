@@ -23,6 +23,8 @@ class PowerFlow:
         self.case_name = case_name
         self.tol = SETTINGS["Tolerance"]
         self.NR_max_iters = SETTINGS["NR_max_steps"]
+        self.limiting = SETTINGS["Limiting"]
+        self.limiting_limit = SETTINGS["Limiting-limit"]
         self.enable_limiting = SETTINGS["Limiting"]
         self.sparse = SETTINGS["Sparse"]
         self.size_Y = size_Y
@@ -74,8 +76,26 @@ class PowerFlow:
 
         return sol
 
-    def apply_limiting(self):
-        pass
+    def apply_limiting(self, newV, prevV, inBus):
+        delta = newV - prevV
+        for bus in inBus:
+            # Check bus real
+            # Check if positive limit hit
+            if delta[bus.node_Vr] > self.limiting_limit:
+                delta[bus.node_Vr] = self.limiting_limit
+            # Check if negative limit hit
+            if delta[bus.node_Vr] < self.limiting_limit:
+                delta[bus.node_Vr] = -1*self.limiting_limit
+            # Check bus imaginary
+            # Check if positive limit hit
+            if delta[bus.node_Vi] > self.limiting_limit:
+                delta[bus.node_Vi] = self.limiting_limit
+            # Check if negative limit hit
+            if delta[bus.node_Vi] < self.limiting_limit:
+                delta[bus.node_Vi] = -1*self.limiting_limit
+        # recreate solution
+        sol = prevV + delta
+        return sol
 
     def check_error(self, step):
         error = max(abs(step))
@@ -234,6 +254,11 @@ class PowerFlow:
             # # # Compute The Error at the current NR iteration # # #
             # TODO: PART 1, STEP 2.6 - Finish the check_error function which calculates the maximum error, err_max
             #  You need to decide the input arguments and return values.
+            
+            # Check if limiting needs to be applied:
+            if self.limiting:
+                v_sol_next = self.apply_limiting(v_sol_next, v_sol, bus)
+            
             diff = np.subtract(v_sol_next,v_sol)
             
             err_max = self.check_error(diff)

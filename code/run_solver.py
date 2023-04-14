@@ -18,6 +18,7 @@ settings = {
     "Tolerance": 1E-10,
     "NR_max_steps": 25,
     "Limiting":  False,
+    "Limiting-limit": 0.1,
     "Sparse": True,
     "case_name": casename,
     "TX-Homotopy": True,
