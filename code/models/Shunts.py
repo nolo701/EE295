@@ -78,27 +78,27 @@ class Shunts:
     def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
         # Stamp G RE
         #inputY[self.bus.node_Vr, self.bus.node_Vr] += self.g
-        inputY_r = np.append(inputY_r,self.bus.node_Vr)
-        inputY_c = np.append(inputY_c,self.bus.node_Vr)
-        inputY_val = np.append(inputY_val,self.g)
+        inputY_r.append(self.bus.node_Vr)
+        inputY_c.append(self.bus.node_Vr)
+        inputY_val.append(self.g)
         
         # Stamp VCCS RE
         #inputY[self.bus.node_Vr, self.bus.node_Vi] += -1*self.b
-        inputY_r = np.append(inputY_r,self.bus.node_Vr)
-        inputY_c = np.append(inputY_c,self.bus.node_Vi)
-        inputY_val = np.append(inputY_val,-1*self.b)
+        inputY_r.append(self.bus.node_Vr)
+        inputY_c.append(self.bus.node_Vi)
+        inputY_val.append(-1*self.b)
         
         # Stamp G IM
         #inputY[self.bus.node_Vi, self.bus.node_Vi] += self.g
-        inputY_r = np.append(inputY_r,self.bus.node_Vi)
-        inputY_c = np.append(inputY_c,self.bus.node_Vi)
-        inputY_val = np.append(inputY_val,self.g)
+        inputY_r.append(self.bus.node_Vi)
+        inputY_c.append(self.bus.node_Vi)
+        inputY_val.append(self.g)
         
         # Stamp VCCS IM
         #inputY[self.bus.node_Vi, self.bus.node_Vr] += self.b
-        inputY_r = np.append(inputY_r,self.bus.node_Vi)
-        inputY_c = np.append(inputY_c,self.bus.node_Vr)
-        inputY_val = np.append(inputY_val,self.b)
+        inputY_r.append(self.bus.node_Vi)
+        inputY_c.append(self.bus.node_Vr)
+        inputY_val.append(self.b)
         
         
         return inputY_r, inputY_c, inputY_val

@@ -22,7 +22,7 @@ class PowerFlow:
 
         self.case_name = case_name
         self.tol = SETTINGS["Tolerance"]
-        self.max_iters = SETTINGS["Max Iters"]
+        self.NR_max_iters = SETTINGS["NR_max_steps"]
         self.enable_limiting = SETTINGS["Limiting"]
         self.sparse = SETTINGS["Sparse"]
         self.size_Y = size_Y
@@ -36,29 +36,39 @@ class PowerFlow:
     
     def solve_sparse(self, Y_lin_r, Y_lin_c, Y_lin_val, J_lin_r, J_lin_val,Y_nonlin_r,
                      Y_nonlin_c, Y_nonlin_val, J_nonlin_r, J_nonlin_val, v_sol):
-        
-        Y_r = np.append(Y_lin_r, Y_nonlin_r).flatten()
-        #Y_r = np.resize(Y_r, [len(Y_r),1])
-        Y_c = np.append(Y_lin_c, Y_nonlin_c).flatten()
-        #Y_c = np.resize(Y_c, [len(Y_c),1])
-        Y_val = np.append(Y_lin_val, Y_nonlin_val).flatten()
-        #Y_val = np.resize(Y_val, [len(Y_val),1])
-        
-        J_r = np.append(J_lin_r, J_nonlin_r).flatten()
-        #J_r = np.resize(J_r, [len(J_r),1])
-        J_val = np.append(J_lin_val, J_nonlin_val).flatten()
-        #J_val = np.resize(J_val, [len(J_val),1])
+        Y_r = []
+        Y_r.extend(Y_lin_r)
+        Y_r.extend(Y_nonlin_r)
+
+        Y_c = []
+        Y_c.extend(Y_lin_c)
+        Y_c.extend(Y_nonlin_c)
+
+        Y_val = []
+        Y_val.extend(Y_lin_val)
+        Y_val.extend(Y_nonlin_val)
+
+        J_r = []
+        J_r.extend(J_lin_r)
+        J_r.extend(J_nonlin_r)
+
+        J_val = []
+        J_val.extend(J_lin_val)
+        J_val.extend(J_nonlin_val)
+
         
         J_c = np.zeros([len(J_r),1]).flatten()
-        '''
-        Y = sparse.csr_matrix((np.asarray(Y_val, dtype=np.float64),
-                               np.asarray(Y_r),np.asarray(Y_c)),
+        
+        Y = sparse.csr_matrix((np.asarray(Y_val, dtype=np.float64), \
+                               (np.asarray(Y_r),
+                                np.asarray(Y_c))),
                                 shape = (self.size_Y, self.size_Y))
         '''
         Y = sparse.csr_matrix((Y_val, (Y_r, Y_c)), 
                           shape = (self.size_Y, self.size_Y))
-        J = sparse.csr_matrix((J_val, (J_r, J_c)), 
-                          shape = (self.size_Y, 1))
+        '''
+        J = sparse.csr_matrix((np.asarray(J_val, dtype=np.float64), (J_r, J_c)), 
+                          shape = (self.size_Y, 1), dtype=np.float)
         #J = sparse.csr_matrix(J_val,(J_r,1))
         sol = np.array(sparse.linalg.spsolve(Y,J))
 
@@ -75,11 +85,11 @@ class PowerFlow:
     def stamp_linear(self, inputBranch, inputSlack, inputShunt, inputTransformer):
         # Init differently if sparse is True or False
         if self.sparse == True:
-            Y_lin_r = np.zeros((1,3))
-            Y_lin_c = np.zeros((1,3))
-            Y_lin_val = np.zeros((1,3))
-            J_lin_r = np.zeros((1,3))
-            J_lin_val = np.zeros((1,3))
+            Y_lin_r = []
+            Y_lin_c = []
+            Y_lin_val = []
+            J_lin_r = []
+            J_lin_val = []
             
         else:
             # create linear Y & J
@@ -119,11 +129,11 @@ class PowerFlow:
     def stamp_nonlinear(self, v_prev, inputGenerator, inputLoad):
         # Set all values to zero
         if self.sparse == True:
-            Y_nonlin_r = np.zeros((1,3))
-            Y_nonlin_c = np.zeros((1,3))
-            Y_nonlin_val = np.zeros((1,3))
-            J_nonlin_r = np.zeros((1,3))
-            J_nonlin_val = np.zeros((1,3))
+            Y_nonlin_r = []
+            Y_nonlin_c = []
+            Y_nonlin_val = []
+            J_nonlin_r = []
+            J_nonlin_val = []
             pass
         else:
             pass
@@ -201,9 +211,8 @@ class PowerFlow:
 
         # # # Begin Solving Via NR # # #
         # TODO: PART 1, STEP 2.3 - Complete the NR While Loop
-        while (err_max > tol) and (NR_count < self.max_iters):
-            print("Started Iter:")
-            print(NR_count+1)
+        while (err_max > tol) and (NR_count < self.NR_max_iters):
+            print("\tStarted Iter:{}",NR_count+1)
             # # # Stamp Nonlinear Power Grid Elements into Y matrix # # #
             # TODO: PART 1, STEP 2.4 - Complete the stamp_nonlinear function which stamps all nonlinear power grid
             #  elements. This function should call the stamp_nonlinear function of each nonlinear element and return
@@ -239,42 +248,48 @@ class PowerFlow:
             else:
                 pass
             #print(v_sol)
-            print("Finished Iter:")
-            print(NR_count+1)
-            print(err_max)
+            print("\tFinished Iter: {} with error {}".format(NR_count+1,err_max))
             NR_count += 1
-
-        print("Final Solution found after inter: ")
-        print(NR_count)
-        #print(v_sol)
         # determine if the NR converged
-        if (err_max <= tol) and (NR_count <= self.max_iters):
+        if (err_max <= tol) and (NR_count <= self.NR_max_iters):
             converge = True
+            print("Solution interation: {}".format(NR_count))
         else:
             converge = False
+            print("PF Diverged!!!!")
+        #print(v_sol)
+        
         return v_sol,converge
     
     
-    def tx_init(self, slack, generator):
+    def init_tx(self, slack, generator, bus):
         v_init = np.zeros((self.size_Y,1))  # create a solution vector filled with zeros of size_Y
         # Set the nodes of each slack or generator
-        for ele in generator:
+        for ele in bus:
             #Slack or PQ Bus
-            v_init[ele.node_Vr] = np.sqrt(2)/2 * ele.Vset
-            v_init[ele.node_Vi] = np.sqrt(2)/2 * ele.Vset
+            v_init[ele.node_Vr] = 1
+            v_init[ele.node_Vi] = .1
             if ele.Type == 2:
                 v_init[ele.node_Q] = 1e-1
+        for ele in generator:
+            #Slack or PQ Bus
+            v_init[ele.bus.node_Vr] = np.sqrt(2)/2 * ele.Vset
+            v_init[ele.bus.node_Vi] = np.sqrt(2)/2 * ele.Vset
+            if ele.gen_type == 2:
+                v_init[ele.bus.node_Q] = 1e-1
         for ele in slack:
             # PV Bus
-            v_init[ele.node_Vr_Slack] = np.sqrt(2)/2 * ele.Vset
-            v_init[ele.node_Vi_Slack] = np.sqrt(2)/2 * ele.Vset
+            #v_init[ele.bus.node_Vr_Slack] = np.sqrt(2)/2 * ele.Vset
+            #v_init[ele.bus.node_Vi_Slack] = np.sqrt(2)/2 * ele.Vset
+            v_init[ele.node_Vr_Slack] = np.sqrt(2)/2 * ele.Vr_set
+            v_init[ele.node_Vi_Slack] = np.sqrt(2)/2 * ele.Vi_set
             
         return v_init
     
     def run_tx_stepping(self, SETTINGS, bus, slack, generator, transformer, branch, shunt, load ):
         # Read other TX settings to create the starting V & Gamma
         tx_step = 1
-        v_init = self.tx_init(slack, generator)
+        v_init = self.init_tx(slack, generator,bus)
         # Create the TX Branches as copy of branch
         tx_branch = branch.copy()
         # Create the TX Transformers as copy of transformer
@@ -286,8 +301,8 @@ class PowerFlow:
         while (tx_converged == False) and (tx_step <= SETTINGS["TX-max_steps"]):
             # tx_v will shrink exponentially according to agressiveness
             # a larger value a more agressive shrink
-            tx_v = 1 - ((100 - SETTINGS["TX-agressiveness"])/100)**tx_step
-            
+            tx_v = 1-((100 - SETTINGS["TX-agressiveness"])/100)**tx_step
+            print("Shorting iter: {}, tx_v: {}".format(tx_step, tx_v))
             
             for ele in tx_branch:
                 ele.set_tx(tx_v, tx_gamma)
@@ -299,20 +314,31 @@ class PowerFlow:
             tx_sol, tx_success = self.run_powerflow(v_init, bus, slack, generator, tx_transformer, tx_branch, shunt, load)
             if tx_success == False:
                 tx_step += 1
+
             else:
                 tx_converged = True
         if tx_converged:
+            print("TX Stepping converged, Starting to back off")
             # With a converged trivial solution try and step it up to original
             recover = False
             recover_step = 1
             recover_sol = np.copy(tx_sol)
             tx_v_sol = tx_v
-            step_lin = (1- tx_v_sol)/SETTINGS["TX-max_steps"]
-            while (recover == False) and (recover_step <= SETTINGS["TX-max_steps"]):
+            step_lin = (tx_v_sol)/SETTINGS["TX-max_steps"]
+            print("Backing off in {} steps, starting tx_v: {}, step: {}".format(SETTINGS["TX-max_steps"], tx_v_sol, step_lin))
+            #while (recover == False) and (recover_step <= SETTINGS["TX-max_steps"]):
+            while (recover_step <= SETTINGS["TX-max_steps"]):
+                
                 # tx_v will recover from the converged point linearly in max steps steps
                 # a larger value a more agressive shrink
-                tx_v = tx_v_sol + recover_step*step_lin
-    
+                
+                # Linear
+                tx_v = tx_v_sol - recover_step*step_lin
+                
+                #exponential
+                #tx_v = tx_v_sol*()
+
+                print("Backing off iter: {}, tx_v: {}".format(recover_step, tx_v))
                 # Refresh the values
                 for ele in tx_branch:
                     ele.set_tx(tx_v, tx_gamma)
@@ -320,12 +346,20 @@ class PowerFlow:
                 for ele in tx_transformer:
                     ele.set_tx(tx_v, tx_gamma)
                 
-                # Run a power flow with increas
-                recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, tx_transformer, tx_branch, shunt, load)
-                if recover == False:
-                    recover_step += 1
-                
+                # Run a power flow with increase
+                recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, transformer, branch, shunt, load)
+                recover_step += 1
+
+                    
+        
         if recover:
+            # Run PF with v=0
+            for ele in tx_branch:
+                ele.set_tx(0, tx_gamma)
+                
+            for ele in tx_transformer:
+                ele.set_tx(0, tx_gamma)
+            recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, tx_transformer, tx_branch, shunt, load)
             return recover_sol, recover
         
         return None, recover

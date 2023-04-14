@@ -33,7 +33,7 @@ def solve(TESTCASE, SETTINGS):
 
     # # # Solver Settings # # #
     tol = SETTINGS['Tolerance']  # NR solver tolerance
-    max_iters = SETTINGS['Max Iters']  # maximum NR iterations
+    max_iters = SETTINGS['NR_max_steps']  # maximum NR iterations
     enable_limiting = SETTINGS['Limiting']  # enable/disable voltage and reactive power limiting
 
     # # # Assign System Nodes Bus by Bus # # #
@@ -92,10 +92,11 @@ def solve(TESTCASE, SETTINGS):
             # Start to implement TX stepping to create better initial conditions
             if SETTINGS["TX-Homotopy"]==True:
                 # Create the init for tx step
-                vinit = powerflow.init_tx(slack, generator)
-                v,success = powerflow.run_tx_stepping(SETTINGS, vinit, bus, slack, generator, transformer, branch, shunt, load)
+                vinit = powerflow.init_tx(slack, generator, bus)
+                v,success = powerflow.run_tx_stepping(SETTINGS, bus, slack, generator, transformer, branch, shunt, load )
                 
-                
+    if success:
+        print("Final Solution of Powerflow converged!")            
                 
                 
                 
