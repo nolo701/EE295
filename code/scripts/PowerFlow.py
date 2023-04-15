@@ -208,7 +208,7 @@ class PowerFlow:
         # # # Copy v_init into the Solution Vectors used during NR, v, and the final solution vector v_sol # # #
         v = np.copy(v_init)
         v_sol = np.copy(v)
-
+        
         # # # Stamp Linear Power Grid Elements into Y matrix # # #
         # TODO: PART 1, STEP 2.1 - Complete the stamp_linear function which stamps all linear power grid elements.
         #  This function should call the stamp_linear function of each linear element and return an updated Y matrix.
@@ -268,10 +268,7 @@ class PowerFlow:
             # TODO: PART 2, STEP 1 - Develop the apply_limiting function which implements voltage and reactive power
             #  limiting. Also, complete the else condition. Do not complete this step until you've finished Part 1.
             #  You need to decide the input arguments and return values.
-            if self.enable_limiting and err_max > tol:
-                self.apply_limiting()
-            else:
-                pass
+
             #print(v_sol)
             print("\tFinished Iter: {} with error {}".format(NR_count+1,err_max))
             NR_count += 1
@@ -346,13 +343,14 @@ class PowerFlow:
             print("TX Stepping converged, Starting to back off")
             # With a converged trivial solution try and step it up to original
             recover = False
+            exit = False
             recover_step = 1
             recover_sol = np.copy(tx_sol)
             tx_v_sol = tx_v
             step_lin = (tx_v_sol)/SETTINGS["TX-max_steps"]
             print("Backing off in {} steps, starting tx_v: {}, step: {}".format(SETTINGS["TX-max_steps"], tx_v_sol, step_lin))
             #while (recover == False) and (recover_step <= SETTINGS["TX-max_steps"]):
-            while (recover_step <= SETTINGS["TX-max_steps"]):
+            while (recover_step <= SETTINGS["TX-max_steps"]) and (exit == False):
                 
                 # tx_v will recover from the converged point linearly in max steps steps
                 # a larger value a more agressive shrink
@@ -373,8 +371,44 @@ class PowerFlow:
                 
                 # Run a power flow with increase
                 recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, transformer, branch, shunt, load)
+                
+                if(recover==False):
+                    # use the last TX convergence and start with half the step size
+                    exit = True
+                    recover_step = -1
+                    recover_tx_v_div = tx_v + recover_step*step_lin # Last one to converge
                 recover_step += 1
+                
+            # Try again from last as a second chance
+            # calculate new step 
+            step_lin = (recover_tx_v_div)/SETTINGS["TX-max_steps"]
+            print("Backing off in {} steps, starting tx_v: {}, step: {}".format(SETTINGS["TX-max_steps"], recover_tx_v_div, step_lin))
+            while (recover_step <= SETTINGS["TX-max_steps"]) and (exit == True):
+                
+                # tx_v will recover from the converged point linearly in max steps steps
+                # a larger value a more agressive shrink
+                
+                # Linear
+                tx_v = recover_tx_v_div - recover_step*step_lin
+                
+                #exponential
+                #tx_v = tx_v_sol*()
 
+                print("Backing off iter: {}, tx_v: {}".format(recover_step, tx_v))
+                # Refresh the values
+                for ele in tx_branch:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                for ele in tx_transformer:
+                    ele.set_tx(tx_v, tx_gamma)
+                
+                # Run a power flow with increase
+                recover_sol, recover = self.run_powerflow(recover_sol, bus, slack, generator, transformer, branch, shunt, load)
+                
+                if(recover==False):
+                    # use the last TX convergence and start with half the step size
+                    exit = False
+                recover_step += 1
                     
         
         if recover:

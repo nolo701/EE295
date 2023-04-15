@@ -86,6 +86,7 @@ def solve(TESTCASE, SETTINGS):
     #  condition once you've finished building your solver.
     run_pf = True
     if run_pf:
+        # Create a vector to use as a history of solutions
         v,success = powerflow.run_powerflow(v_init, bus, slack, generator, transformer, branch, shunt, load)
         # Check if a homotopy method is needed
         if success == False:
