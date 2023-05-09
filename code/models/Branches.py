@@ -1,7 +1,7 @@
 from __future__ import division
 from itertools import count
+from scripts.stamp_helpers import *
 from models.Buses import Buses
-import numpy as np
 
 class Branches:
     _ids = count(0)
@@ -20,7 +20,7 @@ class Branches:
 
         Args:
             from_bus (int): the bus number at the sending end of the branch.
-            to_bus (int): the bus number at the receiVing end of the branch.
+            to_bus (int): the bus number at the receiving end of the branch.
             r (float): the branch resistance
             x (float): the branch reactance
             b (float): the branch susceptance
@@ -29,210 +29,80 @@ class Branches:
             rateB (float): The 2nd rating of the line
             rateC (float): The 3rd rating of the line.
         """
-        self.id = self._ids.__next__()
-        self.from_bus_id = from_bus
-        self.to_bus_id = to_bus
+        self.from_bus = from_bus
+        self.to_bus = to_bus
         self.r = r
         self.x = x
         self.b = b
-        self.status = status
+        self.status = bool(status)
         self.rateA = rateA
         self.rateB = rateB
         self.rateC = rateC
-        self.tx_v = 0
-        self.tx_gamma = 1
-        
-        return
-        # You will need to implement the remainder of the __init__ function yourself.
-        # You should also add some other class functions you deem necessary for stamping,
-        # initializing, and processing results.
-        
-    # this is a custom function to allow each bus to reference the bus    
-    def assign_buses(self, bus_vec):
-        self.from_bus = bus_vec[self.from_bus_id-1]
-        self.to_bus = bus_vec[self.to_bus_id-1]
-        
-        return
-    def stamp_dense(self, inputY):
-        # get the series conductance
-        G = self.r/(self.r**2 + self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        # stamp the conductance into the RE
-        inputY[self.to_bus.node_Vr,self.to_bus.node_Vr] += G
-        inputY[self.from_bus.node_Vr,self.from_bus.node_Vr] += G
-        inputY[self.to_bus.node_Vr,self.from_bus.node_Vr] += -G
-        inputY[self.from_bus.node_Vr,self.to_bus.node_Vr] += -G
-        # stamp the conductance into the IM
-        inputY[self.to_bus.node_Vi,self.to_bus.node_Vi] += G
-        inputY[self.from_bus.node_Vi,self.from_bus.node_Vi] += G
-        inputY[self.to_bus.node_Vi,self.from_bus.node_Vi] += -G
-        inputY[self.from_bus.node_Vi,self.to_bus.node_Vi] += -G
-        
-        # get the Voltage Controlled Current Source (VCCS) Gain
-        Av = self.x/(self.x**2 + self.r**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        # stamp the VCCS into RE
-        inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += Av
-        inputY[self.to_bus.node_Vr,self.from_bus.node_Vi] += -Av
-        inputY[self.from_bus.node_Vr,self.to_bus.node_Vi] += -Av
-        inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += Av
-        
-        # stamp the VCCS into IM
-        inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += -Av
-        inputY[self.to_bus.node_Vi,self.from_bus.node_Vr] += Av
-        inputY[self.from_bus.node_Vi,self.to_bus.node_Vr] += Av
-        inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += -Av
-        
-        # get the splitting current (VCCS) gain
-        Av2 = self.b/2
-        # Amplify by the TX stepping parameters
-        Av2 = Av2*(1+self.tx_v*self.tx_gamma)
-        # it references ground therefore only one stamp in RE & 1 in IM
-        # from node shunt
-        inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += -Av2
-        inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += Av2
-        # to node shunt
-        inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += -Av2
-        inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += Av2
-        
-        
-        return
+
+        # Set minimum x:
+        if abs(self.x) < 1e-6:
+            if self.x < 0:
+                self.x = -1e-6
+            else:
+                self.x = 1e-6
+
+        # convert to G and B
+        self.G_pu = self.r/(self.r**2+self.x**2)
+        self.B_pu= -self.x/(self.r**2+self.x**2)
+
+        self.id = self._ids.__next__()
+
+    def assign_indexes(self, bus):
+        self.Vr_from_node = bus[Buses.bus_key_[self.from_bus]].node_Vr
+        self.Vi_from_node = bus[Buses.bus_key_[self.from_bus]].node_Vi
+        self.Vr_to_node = bus[Buses.bus_key_[self.to_bus]].node_Vr
+        self.Vi_to_node = bus[Buses.bus_key_[self.to_bus]].node_Vi
+
+    def stamp(self, V, Ylin_val, Ylin_row, Ylin_col, Jlin_val, Jlin_row, idx_Y, idx_J):
+        if not self.status:
+            return (idx_Y, idx_J)
+        # Line Bs
+        idx_Y = stampY(self.Vr_from_node, self.Vi_from_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_from_node, self.Vi_to_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_from_node, self.Vr_from_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_from_node, self.Vr_to_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_to_node, self.Vi_to_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_to_node, self.Vi_from_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_to_node, self.Vr_to_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_to_node, self.Vr_from_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+
+        # Line Shunts
+        idx_Y = stampY(self.Vr_from_node, self.Vi_from_node, -self.b/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_from_node, self.Vr_from_node, self.b/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_to_node, self.Vi_to_node, -self.b/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_to_node, self.Vr_to_node, self.b/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+
+        if self.r == 0:
+            return (idx_Y, idx_J)
+
+        # Line Gs
+        idx_Y = stampY(self.Vr_from_node, self.Vr_from_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_from_node, self.Vi_from_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_to_node, self.Vr_to_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_to_node, self.Vi_to_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_from_node, self.Vr_to_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_from_node, self.Vi_to_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vr_to_node, self.Vr_from_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        idx_Y = stampY(self.Vi_to_node, self.Vi_from_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
     
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
-        # get the series conductance
-        G = self.r/(self.r**2 + self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        # stamp the conductance into the RE
-        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vr] += G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(G)
+        return (idx_Y, idx_J)
+
+    def stamp_dual(self):
+        # You need to implement this.
+        pass
+
+    def calc_residuals(self, resid, V):
+        Vr_from = V[self.Vr_from_node]
+        Vr_to = V[self.Vr_to_node]
+        Vi_from = V[self.Vi_from_node]
+        Vi_to = V[self.Vi_to_node]
         
-        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vr] += G
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(G)
-        
-        #inputY[self.to_bus.node_Vr,self.from_bus.node_Vr] += -G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(-G)
-        
-        #inputY[self.from_bus.node_Vr,self.to_bus.node_Vr] += -G
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-G)
-        
-        # stamp the conductance into the IM
-        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vi] += G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(G)
-        
-        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vi] += G
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(G)
-        
-        #inputY[self.to_bus.node_Vi,self.from_bus.node_Vi] += -G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(-G)
-        
-        #inputY[self.from_bus.node_Vi,self.to_bus.node_Vi] += -G
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-G)
-        
-        
-        # get the Voltage Controlled Current Source (VCCS) Gain
-        Av = self.x/(self.x**2 + self.r**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        # stamp the VCCS into RE
-        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(Av)
-        
-        #inputY[self.to_bus.node_Vr,self.from_bus.node_Vi] += -Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(-Av)
-        
-        #inputY[self.from_bus.node_Vr,self.to_bus.node_Vi] += -Av
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-Av)
-        
-        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += Av
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(Av)
-        
-        
-        # stamp the VCCS into IM
-        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += -Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-Av)
-        
-        #inputY[self.to_bus.node_Vi,self.from_bus.node_Vr] += Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(Av)
-        
-        #inputY[self.from_bus.node_Vi,self.to_bus.node_Vr] += Av
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(Av)
-        
-        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += -Av
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(-Av)
-        
-        
-        # get the splitting current (VCCS) gain
-        Av2 = self.b/2
-        # Amplify by the TX stepping parameters
-        Av2 = Av2*(1+self.tx_v*self.tx_gamma)
-        # it references ground therefore only one stamp in RE & 1 in IM
-        # from node shunt
-        #inputY[self.from_bus.node_Vr,self.from_bus.node_Vi] += -Av2
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(-Av2)
-        
-        #inputY[self.from_bus.node_Vi,self.from_bus.node_Vr] += Av2
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(Av2)
-        
-        # to node shunt
-        #inputY[self.to_bus.node_Vr,self.to_bus.node_Vi] += -Av2
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-Av2)
-        
-        #inputY[self.to_bus.node_Vi,self.to_bus.node_Vr] += Av2
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(Av2)
-        
-        return inputY_r, inputY_c, inputY_val
-        
-    def set_tx(self, inputTx_V, inputTx_Gamma):
-        self.tx_v = inputTx_V
-        self.tx_gamma = inputTx_Gamma
-        
-        return
-        
-        
-        
-        
-        
-        
+        resid[self.Vr_from_node] += (Vr_from-Vr_to)*self.G_pu - (Vi_from-Vi_to)*self.B_pu - Vi_from*self.b/2
+        resid[self.Vr_to_node] += (Vr_to-Vr_from)*self.G_pu - (Vi_to-Vi_from)*self.B_pu - Vi_to*self.b/2
+        resid[self.Vi_from_node] += (Vr_from-Vr_to)*self.B_pu + (Vi_from-Vi_to)*self.G_pu + Vr_from*self.b/2
+        resid[self.Vi_to_node] += (Vr_to-Vr_from)*self.B_pu + (Vi_to-Vi_from)*self.G_pu + Vr_to*self.b/2

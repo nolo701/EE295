@@ -1,15 +1,16 @@
 from __future__ import division
-from models.Buses import Buses
 from itertools import count
+from scripts.stamp_helpers import *
+from models.Buses import Buses
 import numpy as np
-
+from models.global_vars import global_vars
 
 class Transformers:
     _ids = count(0)
 
     def __init__(self,
-                 from_bus_id,
-                 to_bus_id,
+                 from_bus,
+                 to_bus,
                  r,
                  x,
                  status,
@@ -32,423 +33,204 @@ class Transformers:
             Bsh_raw (float): the shunt admittance of the transformer
             rating (float): the rating in MVA of the transformer
         """
-        self.id = self._ids.__next__()
-        self.from_bus_id = from_bus_id
-        self.to_bus_id = to_bus_id
+        self.from_bus = from_bus
+        self.to_bus = to_bus
         self.r = r
         self.x = x
         self.status = status
         self.tr = tr
-        self.tr_eff = tr
         self.ang = ang
-        self.ang_eff = ang
         self.Gsh_raw = Gsh_raw
         self.Bsh_raw = Bsh_raw
         self.rating = rating
-        self.tx_v = 0
-        self.tx_gamma = 1
 
-        # You will need to implement the remainder of the __init__ function yourself.
-        # You should also add some other class functions you deem necessary for stamping,
-        # initializing, and processing results.
-    # this is a custom function to allow each bus to reference the bus    
-    def assign_buses(self, bus_vec):
-        self.from_bus = bus_vec[self.from_bus_id-1]
-        self.to_bus = bus_vec[self.to_bus_id-1]    
-    
-    def assign_nodes(self):
-        # Real - From 1
-        self.vs_re_from_1 = Buses._node_index.__next__()
-        # Imag - From 1
-        self.vs_im_from_1 = Buses._node_index.__next__()
-        # Real - From (V1R)
-        self.node_re_from = Buses._node_index.__next__()
-        # Imag - From (V1I)
-        self.node_im_from = Buses._node_index.__next__()
-        # Real - From 2
-        self.vs_re_from_2 = Buses._node_index.__next__()       
-        # Imag - From 2
-        self.vs_im_from_2 = Buses._node_index.__next__()
-        # Real - To (V2R)
-        self.node_re_to = Buses._node_index.__next__()
-        # Imag - To (V2I)
-        self.node_im_to = Buses._node_index.__next__()
-        return
-        
-    def stamp_dense(self, inputY):
-        # Stamp VCVS RE-From 1
-        # "Gain" of the source
-        #inputY = 0*np.copy(inputY_test)
-        
-        Av = self.tr_eff * np.cos(self.ang_eff)
-        # Set the location voltage drop
-        inputY[self.from_bus.node_Vr, self.vs_re_from_1] += 1
-        inputY[self.node_re_from, self.vs_re_from_1] += -1
-        # Set the voltage value from KVL
-        # + Terminal
-        inputY[self.vs_re_from_1, self.from_bus.node_Vr] += 1
-        # - Terminal
-        inputY[self.vs_re_from_1, self.node_re_from] += -1
-        # + Referenced Terminal
-        inputY[self.vs_re_from_1, self.node_re_to] += -Av
-        
-        # Stamp VCVS RE-From 2
-        # "Gain" of the source
-        Av = -1 * self.tr_eff * np.sin(self.ang_eff)
-        # Set the location voltage drop
-        inputY[self.node_re_from, self.vs_re_from_2] += 1
-        # Set the voltage value from KVL
-        # + Terminal
-        inputY[self.vs_re_from_2, self.node_re_from] += 1
-        # - Terminal (grounded)
-        #inputY[self.vs_re_from_2, self.node_re_from] += -1
-        # + Referenced Terminal
-        inputY[self.vs_re_from_2, self.node_im_to] += -Av
-        
-        # Stamp VCVS IM-From 1
-        # "Gain" of the source
-        Av = self.tr_eff * np.sin(self.ang_eff)
-        # Set the location voltage drop
-        inputY[self.from_bus.node_Vi, self.vs_im_from_1] += 1
-        inputY[self.node_im_from, self.vs_im_from_1] += -1
-        # Set the voltage value from KVL
-        # + Terminal
-        inputY[self.vs_im_from_1, self.from_bus.node_Vi] += 1
-        # - Terminal
-        inputY[self.vs_im_from_1, self.node_im_from] += -1
-        # + Referenced Terminal
-        inputY[self.vs_im_from_1, self.node_re_to] += -Av
-        
-        # Stamp VCVS IM-From 2
-        # "Gain" of the source
-        Av = self.tr_eff * np.cos(self.ang_eff)
-        # Set the location voltage drop
-        inputY[self.node_im_from, self.vs_im_from_2] += 1
-        # Set the voltage value from KVL
-        # + Terminal
-        inputY[self.vs_im_from_2, self.node_im_from] += 1
-        # - Terminal (grounded)
-        #inputY[self.vs_re_from_2, self.node_re_from] += -1
-        # + Referenced Terminal
-        inputY[self.vs_im_from_2, self.node_im_to] += -Av
-        
-        # Stamp Current Controlled Current Sources on the To-Side
-        # Stamp CCCS RE-TO: ref I1RE
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.cos(self.ang_eff)
-        inputY[self.node_re_to, self.vs_re_from_1] += Av
-        
-        # Stamp CCCS RE-TO: ref I1IM
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.sin(self.ang_eff)
-        inputY[self.node_re_to, self.vs_im_from_1] += Av
-        
-        # Stamp CCCS IM-TO: ref I1RE
-        # Current "Gain"
-        Av = self.tr_eff * np.sin(self.ang_eff)
-        inputY[self.node_im_to, self.vs_re_from_1] += Av
-        
-        # Stamp CCCS IM-TO: ref I1IM
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.cos(self.ang_eff)
-        inputY[self.node_im_to, self.vs_im_from_1] += Av
-        
-        # Stamp the psuedo branch that acts as as loss
-        # Stamp the VCCS in the RE
-        Av = self.x/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
-        inputY[self.node_re_to, self.to_bus.node_Vi] += -Av
-        inputY[self.to_bus.node_Vr, self.node_im_to] += -Av
-        inputY[self.node_re_to, self.node_im_to] += Av
-        
-        # Stamp the conductance in the RE
-        G = self.r/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
-        inputY[self.to_bus.node_Vr, self.node_re_to] += -G
-        inputY[self.node_re_to,self.to_bus.node_Vr] += -G
-        inputY[self.node_re_to,self.node_re_to] += G
-        
-        # Stamp the VCCS in the IM
-        Av = -1*self.x/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
-        inputY[self.to_bus.node_Vi, self.node_re_to] += -Av
-        inputY[self.node_im_to, self.to_bus.node_Vr] += -Av
-        inputY[self.node_im_to, self.node_re_to] += Av
-        
-        # Stamp the conductance in the RE 
-        G = self.r/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
-        inputY[self.to_bus.node_Vi, self.node_im_to] += -G
-        inputY[self.node_im_to,self.to_bus.node_Vi] += -G
-        inputY[self.node_im_to,self.node_im_to] += G
+        # Set minimum x to avoid numerical issues.
+        if abs(self.x) < 1e-6:
+            if self.x < 0:
+                self.x = -1e-6
+            else:
+                self.x = 1e-6
 
+        # convert to G and B
+        self.G_pu = self.r/(self.r**2+self.x**2)
+        self.B_pu= -self.x/(self.r**2+self.x**2)
+
+        self.id = self._ids.__next__()
+
+    def assign_indexes(self, bus):
+        self.Vr_from_node = bus[Buses.bus_key_[self.from_bus]].node_Vr
+        self.Vi_from_node = bus[Buses.bus_key_[self.from_bus]].node_Vi
+        self.Vr_to_node = bus[Buses.bus_key_[self.to_bus]].node_Vr
+        self.Vi_to_node = bus[Buses.bus_key_[self.to_bus]].node_Vi
+        if global_vars.xfmr_model == 1:
+            self.Iaux_r_node = Buses._node_index.__next__()
+            self.Iaux_i_node = Buses._node_index.__next__()
+            self.Vaux_r_node = Buses._node_index.__next__()
+            self.Vaux_i_node = Buses._node_index.__next__()
+            # If you use this xfmr model, you're going to need to add
+            # lambda indices for these extra nodes constraints.
+
+    def stamp(self, V, Ylin_val, Ylin_row, Ylin_col, Jlin_val, Jlin_row, idx_Y, idx_J):
+        if not self.status:
+            return (idx_Y, idx_J)
+        if global_vars.xfmr_model == 0:
+            # Tim's preferred transformer model
+            # Where you don't need to add extra variables
+            # Derived from pg 9-14 of the Andersonn reading.
+            tr = self.tr
+            tr2 = tr*tr
+            Gt = self.G_pu
+            Bt = self.B_pu + self.Bsh_raw/2
+            phi_rad = self.ang*np.pi/180
+            cosphi = np.cos(phi_rad)
+            sinphi = np.sin(phi_rad)
+            Gcosphi = self.G_pu*cosphi
+            Gsinphi = self.G_pu*sinphi
+            Bcosphi = Bt*cosphi #self.B_pu*cosphi
+            Bsinphi = Bt*sinphi #self.B_pu*sinphi
+            G_shunt_from = self.G_pu/tr2
+            B_shunt_from = Bt/tr2
+            MR_from = (Gcosphi  - Bsinphi)/tr
+            MI_from = (Gsinphi  + Bcosphi)/tr
+            G_to = (Gcosphi + Bsinphi)/tr
+            B_to = (Bcosphi - Gsinphi)/tr
+            MR_to = Gt
+            MI_to = Bt
+            
+            dIrfdVrf = G_shunt_from
+            dIrfdVrt = -MR_from
+            dIrfdVif = -B_shunt_from
+            dIrfdVit = MI_from
+            idx_Y = stampY(self.Vr_from_node, self.Vr_from_node, dIrfdVrf, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_from_node, self.Vr_to_node, dIrfdVrt, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_from_node, self.Vi_from_node, dIrfdVif, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_from_node, self.Vi_to_node, dIrfdVit, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            
+            dIrtdVrf = -G_to
+            dIrtdVrt = MR_to
+            dIrtdVif = B_to
+            dIrtdVit = -MI_to
+            idx_Y = stampY(self.Vr_to_node, self.Vr_from_node, dIrtdVrf, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vr_to_node, dIrtdVrt, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vi_from_node, dIrtdVif, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vi_to_node, dIrtdVit, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            
+            dIifdVrf = B_shunt_from
+            dIifdVrt = -MI_from
+            dIifdVif = G_shunt_from
+            dIifdVit = -MR_from
+            idx_Y = stampY(self.Vi_from_node, self.Vr_from_node, dIifdVrf, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_from_node, self.Vr_to_node, dIifdVrt, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_from_node, self.Vi_from_node, dIifdVif, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_from_node, self.Vi_to_node, dIifdVit, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            
+            dIitdVrf = -B_to
+            dIitdVrt = MI_to
+            dIitdVif = -G_to
+            dIitdVit = MR_to
+            idx_Y = stampY(self.Vi_to_node, self.Vr_from_node, dIitdVrf, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vr_to_node, dIitdVrt, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vi_from_node, dIitdVif, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vi_to_node, dIitdVit, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        else:
+            # Amrit's preferred transformer model,
+            # where you do need to add extra variables
+            trcos = self.tr*np.cos(self.ang*np.pi/180.0)
+            trsin = self.tr*np.sin(self.ang*np.pi/180.0)
+            # I_aux_r leaving Vr_from_node
+            idx_Y = stampY(self.Vr_from_node, self.Iaux_r_node, 1, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            # I_aux_i leaving Vi_from_node
+            idx_Y = stampY(self.Vi_from_node, self.Iaux_i_node, 1, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            # Vr_from setpoint
+            idx_Y = stampY(self.Iaux_r_node, self.Vr_from_node, -1, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Iaux_r_node, self.Vaux_r_node, trcos, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Iaux_r_node, self.Vaux_i_node, -trsin, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            # Vi_from setpoint
+            idx_Y = stampY(self.Iaux_i_node, self.Vi_from_node, -1, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Iaux_i_node, self.Vaux_r_node, trsin, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Iaux_i_node, self.Vaux_i_node, trcos, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            # Vaux_r KCL
+            idx_Y = stampY(self.Vaux_r_node, self.Iaux_r_node, -trcos, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Iaux_i_node, -trsin, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Vaux_r_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Vr_to_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Vaux_i_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Vi_to_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_r_node, self.Vaux_i_node, -self.Bsh_raw/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            # Vaux_i KCL
+            idx_Y = stampY(self.Vaux_i_node, self.Iaux_r_node, trsin, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Iaux_i_node, -trcos, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Vaux_i_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Vi_to_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Vaux_r_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Vr_to_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vaux_i_node, self.Vaux_r_node, self.Bsh_raw/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            
+            # Vto losses
+            idx_Y = stampY(self.Vr_to_node, self.Vr_to_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vaux_r_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)            
+            idx_Y = stampY(self.Vr_to_node, self.Vi_to_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vaux_i_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vr_to_node, self.Vi_to_node, -self.Bsh_raw/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+
+            idx_Y = stampY(self.Vi_to_node, self.Vi_to_node, self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vaux_i_node, -self.G_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vr_to_node, self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vaux_r_node, -self.B_pu, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+            idx_Y = stampY(self.Vi_to_node, self.Vr_to_node, self.Bsh_raw/2, Ylin_val, Ylin_row, Ylin_col, idx_Y)
+        
+        return (idx_Y, idx_J)
+
+    def stamp_dual(self):
+        # You need to implement this.
         pass
+
+    def calc_residuals(self, resid, V):
+        Vrf = V[self.Vr_from_node]
+        Vrt = V[self.Vr_to_node]
+        Vif = V[self.Vi_from_node]
+        Vit = V[self.Vi_to_node]
+
+        tr = self.tr
+        tr2 = tr*tr
+        Gt = self.G_pu
+        Bt = self.B_pu + self.Bsh_raw/2
+        phi_rad = self.ang*np.pi/180
+        cosphi = np.cos(phi_rad)
+        sinphi = np.sin(phi_rad)
+        Gcosphi = self.G_pu*cosphi
+        Gsinphi = self.G_pu*sinphi
+        Bcosphi = Bt*cosphi #self.B_pu*cosphi
+        Bsinphi = Bt*sinphi #self.B_pu*sinphi
+        G_shunt_from = self.G_pu/tr2
+        B_shunt_from = Bt/tr2
+        MR_from = (Gcosphi  - Bsinphi)/tr
+        MI_from = (Gsinphi  + Bcosphi)/tr
+        G_to = (Gcosphi + Bsinphi)/tr
+        B_to = (Bcosphi - Gsinphi)/tr
+        MR_to = Gt
+        MI_to = Bt
         
-        
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
-        Av = self.tr * np.cos(self.ang_eff)
-        # Set the location voltage drop
-        #inputY[self.from_bus.node_Vr, self.vs_re_from_1] += 1
-        inputY_r.append(self.from_bus.node_Vr)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(1)
-        
-        #inputY[self.node_re_from, self.vs_re_from_1] += -1
-        inputY_r.append(self.node_re_from)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(-1)
-        
-        # Set the voltage value from KVL
-        # + Terminal
-        #inputY[self.vs_re_from_1, self.from_bus.node_Vr] += 1
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.from_bus.node_Vr)
-        inputY_val.append(1)
-        
-        # - Terminal
-        #inputY[self.vs_re_from_1, self.node_re_from] += -1
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.node_re_from)
-        inputY_val.append(-1)
-        
-        # + Referenced Terminal
-        #inputY[self.vs_re_from_1, self.node_re_to] += -Av
-        inputY_r.append(self.vs_re_from_1)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
-        
-        # Stamp VCVS RE-From 2
-        # "Gain" of the source
-        Av = -1 * self.tr_eff * np.sin(self.ang_eff)
-        # Set the location voltage drop
-        #inputY[self.node_re_from, self.vs_re_from_2] += 1
-        inputY_r.append(self.node_re_from)
-        inputY_c.append(self.vs_re_from_2)
-        inputY_val.append(1)
-        
-        # Set the voltage value from KVL
-        # + Terminal
-        #inputY[self.vs_re_from_2, self.node_re_from] += 1
-        inputY_r.append(self.vs_re_from_2)
-        inputY_c.append(self.node_re_from)
-        inputY_val.append(1)
-        
-        # - Terminal (grounded)
-        #inputY[self.vs_re_from_2, self.node_re_from] += -1
-        # + Referenced Terminal
-        #inputY[self.vs_re_from_2, self.node_im_to] += -Av
-        inputY_r.append(self.vs_re_from_2)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
-        
-        
-        # Stamp VCVS IM-From 1
-        # "Gain" of the source
-        Av = self.tr_eff * np.sin(self.ang_eff)
-        # Set the location voltage drop
-        #inputY[self.from_bus.node_Vi, self.vs_im_from_1] += 1
-        inputY_r.append(self.from_bus.node_Vi)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(1)
-        
-        #inputY[self.node_im_from, self.vs_im_from_1] += -1
-        inputY_r.append(self.node_im_from)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(-1)
-        
-        # Set the voltage value from KVL
-        # + Terminal
-        #inputY[self.vs_im_from_1, self.from_bus.node_Vi] += 1
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.from_bus.node_Vi)
-        inputY_val.append(1)
-        
-        # - Terminal
-        #inputY[self.vs_im_from_1, self.node_im_from] += -1
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.node_im_from)
-        inputY_val.append(-1)
-        
-        # + Referenced Terminal
-        #inputY[self.vs_im_from_1, self.node_re_to] += -Av
-        inputY_r.append(self.vs_im_from_1)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
-        
-        
-        # Stamp VCVS IM-From 2
-        # "Gain" of the source
-        Av = self.tr_eff * np.cos(self.ang_eff)
-        # Set the location voltage drop
-        #inputY[self.node_im_from, self.vs_im_from_2] += 1
-        inputY_r.append(self.node_im_from)
-        inputY_c.append(self.vs_im_from_2)
-        inputY_val.append(1)
-        
-        # Set the voltage value from KVL
-        # + Terminal
-        #inputY[self.vs_im_from_2, self.node_im_from] += 1
-        inputY_r.append(self.vs_im_from_2)
-        inputY_c.append(self.node_im_from)
-        inputY_val.append(1)
-        
-        # - Terminal (grounded)
-        #inputY[self.vs_re_from_2, self.node_re_from] += -1
-        # + Referenced Terminal
-        #inputY[self.vs_im_from_2, self.node_im_to] += -Av
-        inputY_r.append(self.vs_im_from_2)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
-        
-        
-        # Stamp Current Controlled Current Sources on the To-Side
-        # Stamp CCCS RE-TO: ref I1RE
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.cos(self.ang_eff)
-        #inputY[self.node_re_to, self.vs_re_from_1] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(Av)
-        
-        # Stamp CCCS RE-TO: ref I1IM
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.sin(self.ang_eff)
-        #inputY[self.node_re_to, self.vs_im_from_1] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(Av)
-        
-        # Stamp CCCS IM-TO: ref I1RE
-        # Current "Gain"
-        Av = self.tr_eff * np.sin(self.ang_eff)
-        #inputY[self.node_im_to, self.vs_re_from_1] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.vs_re_from_1)
-        inputY_val.append(Av)
-        
-        # Stamp CCCS IM-TO: ref I1IM
-        # Current "Gain"
-        Av = -1 * self.tr_eff * np.cos(self.ang_eff)
-        #inputY[self.node_im_to, self.vs_im_from_1] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.vs_im_from_1)
-        inputY_val.append(Av)
-        
-        # Stamp the psuedo branch that acts as as loss
-        # Stamp the VCCS in the RE
-        Av = self.x/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        #inputY[self.to_bus.node_Vr, self.to_bus.node_Vi] += Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append( Av)
-        
-        #inputY[self.node_re_to, self.to_bus.node_Vi] += -Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-Av)
-        
-        #inputY[self.to_bus.node_Vr, self.node_im_to] += -Av
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-Av)
-        
-        #inputY[self.node_re_to, self.node_im_to] += Av
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(Av)
-        
-        
-        # Stamp the conductance in the RE
-        G = self.r/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        #inputY[self.to_bus.node_Vr, self.to_bus.node_Vr] += G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(G)
-        
-        #inputY[self.to_bus.node_Vr, self.node_re_to] += -G
-        inputY_r.append(self.to_bus.node_Vr)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-G)
-        
-        #inputY[self.node_re_to,self.to_bus.node_Vr] += -G
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-G)
-        
-        #inputY[self.node_re_to,self.node_re_to] += G
-        inputY_r.append(self.node_re_to)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(G)
-        
-        # Stamp the VCCS in the IM
-        Av = -1*self.x/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        Av = Av*(1+self.tx_v*self.tx_gamma)
-        #inputY[self.to_bus.node_Vi, self.to_bus.node_Vr] += Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(Av)
-        
-        #inputY[self.to_bus.node_Vi, self.node_re_to] += -Av
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(-Av)
-        
-        #inputY[self.node_im_to, self.to_bus.node_Vr] += -Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.to_bus.node_Vr)
-        inputY_val.append(-Av)
-        
-        #inputY[self.node_im_to, self.node_re_to] += Av
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.node_re_to)
-        inputY_val.append(Av)
-        
-        
-        # Stamp the conductance in the RE 
-        G = self.r/(self.r**2+self.x**2)
-        # Amplify by the TX stepping parameters
-        G = G*(1+self.tx_v*self.tx_gamma)
-        #inputY[self.to_bus.node_Vi, self.to_bus.node_Vi] += G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(G)
-        
-        #inputY[self.to_bus.node_Vi, self.node_im_to] += -G
-        inputY_r.append(self.to_bus.node_Vi)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(-G)
-        
-        #inputY[self.node_im_to,self.to_bus.node_Vi] += -G
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.to_bus.node_Vi)
-        inputY_val.append(-G)
-        
-        #inputY[self.node_im_to,self.node_im_to] += G
-        inputY_r.append(self.node_im_to)
-        inputY_c.append(self.node_im_to)
-        inputY_val.append(G)
-        
-        return inputY_r, inputY_c, inputY_val
-    
-    def set_tx(self, inputTx_V, inputTx_Gamma):
-        self.tx_v = inputTx_V
-        self.tx_gamma = inputTx_Gamma
-        # update the effective turn ratio
-        self.tr_eff = self.tr - (self.tr-1)*self.tx_v
-        # update the effective angle
-        self.ang_eff = self.ang - (self.ang)*self.tx_v
-        
-        return
+        dIrfdVrf = G_shunt_from
+        dIrfdVrt = -MR_from
+        dIrfdVif = -B_shunt_from
+        dIrfdVit = MI_from
+        resid[self.Vr_from_node] += dIrfdVrf*Vrf + dIrfdVrt*Vrt + dIrfdVif*Vif + dIrfdVit*Vit
+
+        dIrtdVrf = -G_to
+        dIrtdVrt = MR_to
+        dIrtdVif = B_to
+        dIrtdVit = -MI_to
+        resid[self.Vr_to_node] += dIrtdVrf*Vrf + dIrtdVrt*Vrt + dIrtdVif*Vif + dIrtdVit*Vit
+
+        dIifdVrf = B_shunt_from
+        dIifdVrt = -MI_from
+        dIifdVif = G_shunt_from
+        dIifdVit = -MR_from
+        resid[self.Vi_from_node] += dIifdVrf*Vrf + dIifdVrt*Vrt + dIifdVif*Vif + dIifdVit*Vit
+
+        dIitdVrf = -B_to
+        dIitdVrt = MI_to
+        dIitdVif = -G_to
+        dIitdVit = MR_to
+        resid[self.Vi_to_node] += dIitdVrf*Vrf + dIitdVrt*Vrt + dIitdVif*Vif + dIitdVit*Vit

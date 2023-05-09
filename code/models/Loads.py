@@ -1,12 +1,14 @@
 from __future__ import division
 from itertools import count
-import numpy as np
+from models.Buses import Buses
+from scripts.stamp_helpers import *
+from models.global_vars import global_vars
 
 class Loads:
     _ids = count(0)
 
     def __init__(self,
-                 Bus_id,
+                 Bus,
                  P,
                  Q,
                  IP,
@@ -19,7 +21,7 @@ class Loads:
 
         Args:
             Bus (int): the bus where the load is located
-            P (float): the active power of a constant power (PQ) load.
+            self.P (float): the active power of a constant power (PQ) load.
             Q (float): the reactive power of a constant power (PQ) load.
             IP (float): the active power component of a constant current load.
             IQ (float): the reactive power component of a constant current load.
@@ -28,124 +30,62 @@ class Loads:
             area (int): location where the load is assigned to.
             status (bool): indicates if the load is in-service or out-of-service.
         """
-        self.id = Loads._ids.__next__()
-        self.Bus_id = Bus_id
-        # Normalize P and Q to convert into pu system
-        self.P = P/100
-        self.Q = Q/100
-        self.IP = IP
-        self.IQ = IQ
-        self.ZP = ZP
-        self.ZQ = ZQ
+        self.Bus = Bus
+        self.P_MW = P
+        self.Q_MVA = Q
+        self.IP_MW = IP
+        self.IQ_MVA = IQ
+        self.ZP_MW = ZP
+        self.ZQ_MVA = ZQ
         self.area = area
         self.status = status
-        # You will need to implement the remainder of the __init__ function yourself.
-        # You should also add some other class functions you deem necessary for stamping,
-        # initializing, and processing results.
-        
-    def assign_buses(self, bus_vec):
-        self.bus = bus_vec[self.Bus_id-1]
-        return
+        self.id = Loads._ids.__next__()
+
+        self.P = P/global_vars.base_MVA
+        self.Q = Q/global_vars.base_MVA
+        self.IP = IP/global_vars.base_MVA
+        self.IQ = IQ/global_vars.base_MVA
+        self.ZP = ZP/global_vars.base_MVA
+        self.ZQ = ZQ/global_vars.base_MVA
     
-    def stamp_dense(self, inputY, inputJ, prev_sol):
-        # grab values used to evaluate the functions
+    def assign_indexes(self, bus):
+        # Nodes shared by generators on the same bus
+        self.Vr_node = bus[Buses.bus_key_[self.Bus]].node_Vr
+        self.Vi_node = bus[Buses.bus_key_[self.Bus]].node_Vi
+        # check something about gen_type??
+    
+    def stamp(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
+        Vr = V[self.Vr_node]
+        Vi = V[self.Vi_node]
+
+        Irg_hist = (self.P*Vr+self.Q*Vi)/(Vr**2+Vi**2)
+        dIrldVr = (self.P*(Vi**2-Vr**2) - 2*self.Q*Vr*Vi)/(Vr**2+Vi**2)**2
+        dIrldVi = (self.Q*(Vr**2-Vi**2) - 2*self.P*Vr*Vi)/(Vr**2+Vi**2)**2
+        Vr_J_stamp = -Irg_hist + dIrldVr*Vr + dIrldVi*Vi
+        
+        idx_Y = stampY(self.Vr_node, self.Vr_node, dIrldVr, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vr_node, self.Vi_node, dIrldVi, Y_val, Y_row, Y_col, idx_Y)
+        idx_J = stampJ(self.Vr_node, Vr_J_stamp, J_val, J_row, idx_J)
+
+        Iig_hist = (self.P*Vi-self.Q*Vr)/(Vr**2+Vi**2)
+        dIildVi = -dIrldVr
+        dIildVr = dIrldVi
+        Vi_J_stamp = -Iig_hist + dIildVr*Vr + dIildVi*Vi
+
+        idx_Y = stampY(self.Vi_node, self.Vr_node, dIildVr, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vi_node, self.Vi_node, dIildVi, Y_val, Y_row, Y_col, idx_Y)
+        idx_J = stampJ(self.Vi_node, Vi_J_stamp, J_val, J_row, idx_J)
+
+        return (idx_Y, idx_J)
+
+    def stamp_dual(self):
+        # You need to implement this.
+        pass
+
+    def calc_residuals(self, resid, V):
         P = self.P
-        Vr = prev_sol[self.bus.node_Vr]
-        Vi = prev_sol[self.bus.node_Vi]
+        Vr = V[self.Vr_node]
+        Vi = V[self.Vi_node]
         Q = self.Q
-        # helpful value that is repeated
-        denom = (Vr**2+Vi**2)
-        
-        # Constant Current source of RE
-        # evaluate the functions to get info for circuit element stamps
-        Irg_prev = (P*Vr+Q*Vi)/denom
-        dIrg_wrt_Vr = (P*(Vi**2-Vr**2) - 2*Q*Vr*Vi)/(denom)**2
-        dIrg_wrt_Vi = (Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
-
-        # Get summed value for the CCS
-        Vr_load = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi
-        # stamp the conductance
-        inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
-        # stamp the VCCS
-        inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
-        # stamp the CCS
-        inputJ[self.bus.node_Vr] += -Vr_load
-        
-        # Constant Current source of IM
-        # evaluate the functions to get info to stamp the constant current source
-        Iig_prev = (P*Vi-Q*Vr)/denom
-        dIig_wrt_Vr = dIrg_wrt_Vi
-        dIig_wrt_Vi = -dIrg_wrt_Vr
-
-        # Final value of Taylor Series Expansion
-        Vi_load = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi
-        # stamp the conductance
-        inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
-        # stamp the VCCS
-        inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
-        # stamp the CCS
-        inputJ[self.bus.node_Vi] += -Vi_load
-
-        return
-        
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val, prev_sol):
-        # grab values used to evaluate the functions
-        P = self.P
-        Vr = prev_sol[self.bus.node_Vr]
-        Vi = prev_sol[self.bus.node_Vi]
-        Q = self.Q
-        # helpful value that is repeated
-        denom = (Vr**2+Vi**2)
-        
-        # Constant Current source of RE
-        # evaluate the functions to get info for circuit element stamps
-        Irg_prev = (P*Vr+Q*Vi)/denom
-        dIrg_wrt_Vr = (P*(Vi**2-Vr**2) - 2*Q*Vr*Vi)/(denom)**2
-        dIrg_wrt_Vi = (Q*(Vr**2-Vi**2) - 2*P*Vr*Vi)/(denom)**2
-
-        # Get summed value for the CCS
-        Vr_load = Irg_prev - dIrg_wrt_Vr*Vr - dIrg_wrt_Vi*Vi
-        # stamp the conductance
-        #inputY[self.bus.node_Vr, self.bus.node_Vr] += dIrg_wrt_Vr
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIrg_wrt_Vr)
-        
-        # stamp the VCCS
-        #inputY[self.bus.node_Vr, self.bus.node_Vi] += dIrg_wrt_Vi
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIrg_wrt_Vi)
-        
-        # stamp the CCS
-        #inputJ[self.bus.node_Vr] += -Vr_load
-        inputJ_r.append(self.bus.node_Vr)
-        inputJ_val.append(-Vr_load)
-        
-        # Constant Current source of IM
-        # evaluate the functions to get info to stamp the constant current source
-        Iig_prev = (P*Vi-Q*Vr)/denom
-        dIig_wrt_Vr = dIrg_wrt_Vi
-        dIig_wrt_Vi = -dIrg_wrt_Vr
-
-        # Final value of Taylor Series Expansion
-        Vi_load = Iig_prev - dIig_wrt_Vr*Vr - dIig_wrt_Vi*Vi
-        # stamp the conductance
-        #inputY[self.bus.node_Vi, self.bus.node_Vr] += dIig_wrt_Vr
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(dIig_wrt_Vr)
-        
-        # stamp the VCCS
-        #inputY[self.bus.node_Vi, self.bus.node_Vi] += dIig_wrt_Vi
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(dIig_wrt_Vi)
-        
-        # stamp the CCS
-        #inputJ[self.bus.node_Vi] += -Vi_load
-        inputJ_r.append(self.bus.node_Vi)
-        inputJ_val.append(-Vi_load)
-        
-        
-        return inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val
+        resid[self.Vr_node] += (P*Vr+Q*Vi)/(Vr**2+Vi**2)
+        resid[self.Vi_node] += (P*Vi-Q*Vr)/(Vr**2+Vi**2)
