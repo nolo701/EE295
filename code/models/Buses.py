@@ -38,7 +38,9 @@ class Buses:
         self.node_Vr = None  # real voltage node at a bus
         self.node_Vi = None  # imaginary voltage node at a bus
         self.node_Q = None  # reactive power or voltage contstraint node at a bus
-
+        self.node_Lr = None  # Dual variable corresponding to real voltage node at a bus
+        self.node_Li = None  # Dual variable corresponding to imaginary voltage node at a bus
+        self.node_Lq = None  # Dual variable corresponding to reactive power or voltage contstraint node at a bus
         # initialize dual nodes
         # TODO - you can name them as you please
 
@@ -70,6 +72,7 @@ class Buses:
             self.node_Vi = self._node_index.__next__()
             self.node_Q = self._node_index.__next__()
         
+        
     def assign_dual_nodes(self):
         """Assign nodes for the dual variables (lambdas)
 
@@ -79,6 +82,23 @@ class Buses:
         # TODO
         # You need to do this
         # Remember, every equality constraint in your system needs a lambda variable.
+        # If Slack or PQ Bus
+        # Create infeasibility variables
+        self.ifr = self._node_index.__next__()
+        self.ifi = self._node_index.__next__()
+        if self.Type == 1 or self.Type == 3:
+            self.node_Lr = self._node_index.__next__()
+            self.node_Li = self._node_index.__next__()
+
+        # If PV Bus
+        elif self.Type == 2:
+            self.node_Lr = self._node_index.__next__()
+            self.node_Li = self._node_index.__next__()
+            self.node_Lq = self._node_index.__next__()
+            
+        
+        
+        
         pass
 
     def calc_Vphasor(self, V_sol):
