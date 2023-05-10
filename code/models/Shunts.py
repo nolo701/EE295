@@ -58,6 +58,8 @@ class Shunts:
     def assign_indexes(self, bus):
         self.Vr_node = bus[Buses.bus_key_[self.Bus]].node_Vr
         self.Vi_node = bus[Buses.bus_key_[self.Bus]].node_Vi
+        self.Lr_node = bus[Buses.bus_key_[self.Bus]].node_Lr
+        self.Li_node = bus[Buses.bus_key_[self.Bus]].node_Li
 
     def stamp(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
         idx_Y = stampY(self.Vr_node, self.Vr_node,
@@ -70,8 +72,17 @@ class Shunts:
                                     self.B_pu, Y_val, Y_row, Y_col, idx_Y)
         return (idx_Y, idx_J)
 
-    def stamp_dual(self):
+    def stamp_dual(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
         # You need to implement this.
+        idx_Y = stampY(self.Lr_node, self.Lr_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Li_node, self.Li_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Lr_node, self.Li_node,
+                                    -self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Li_node, self.Lr_node,
+                                    +self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        return (idx_Y, idx_J)
         pass
 
     def calc_residuals(self, resid, V):
