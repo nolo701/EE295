@@ -39,8 +39,8 @@ class FeasibilitySource:
 
     def stamp(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
         # You need to implement this.
-        idx_Y = stampY(self.node_Vr, self.ifr, 1, Y_val, Y_row, Y_col, idx_Y)
-        idx_Y = stampY(self.node_Vi, self.ifi, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.node_Vr, self.ifr, -1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.node_Vi, self.ifi, -1, Y_val, Y_row, Y_col, idx_Y)
         
         return (idx_Y, idx_J)
 
