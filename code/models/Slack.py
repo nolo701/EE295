@@ -1,12 +1,14 @@
 from __future__ import division
-from models.Buses import Buses
 import numpy as np
-
+from models.Buses import Buses
+from models.Buses import Buses
+from scripts.stamp_helpers import *
+from models.global_vars import global_vars
 
 class Slack:
 
     def __init__(self,
-                 bus_id,
+                 Bus,
                  Vset,
                  ang,
                  Pinit,
@@ -20,81 +22,80 @@ class Slack:
             Pinit (float): the initial active power that the slack bus is supplying
             Qinit (float): the initial reactive power that the slack bus is supplying
         """
-        # You will need to implement the remainder of the __init__ function yourself.
-        self.bus_id = bus_id
-        self.bus = None
-        self.Pinit = Pinit
-        self.Qinit = Qinit
-        # initialize nodes
-        self.node_Vr_Slack = None
-        self.node_Vi_Slack = None
+        self.Bus = Bus
         self.Vset = Vset
         self.ang = ang
-        self.Vr_set = Vset*np.cos(self.ang*np.pi/180)
-        self.Vi_set = Vset*np.sin(self.ang*np.pi/180)
+        self.Pinit_MVA = Pinit
+        self.Qinit_MVA = Qinit
+        self.Pinit = Pinit/global_vars.base_MVA
+        self.Qinit = Qinit/global_vars.base_MVA
+        
+        # initialize
+        self.Vr_set = Vset*np.cos(ang*np.pi/180)
+        self.Vi_set = Vset*np.sin(ang*np.pi/180)
+
+        self.Ir_init = (-self.Vr_set*self.Pinit - self.Vi_set*self.Qinit)/(Vset**2)
+        self.Ii_init = (-self.Vi_set*self.Pinit + self.Vi_set*self.Qinit)/(Vset**2)
+
+        # initialize some dual nodes
+        # TODO - you can name them as you please
 
 
-    def assign_nodes(self):
+    def assign_nodes(self, bus):
         """Assign the additional slack bus nodes for a slack bus.
-
         Returns:
             None
         """
-        self.node_Vr_Slack = Buses._node_index.__next__()
-        self.node_Vi_Slack = Buses._node_index.__next__()
+        # HINT: you might want to change this
+        self.Vr_node = bus[Buses.bus_key_[self.Bus]].node_Vr
+        self.Vi_node = bus[Buses.bus_key_[self.Bus]].node_Vi
+        self.Slack_Ir_node = Buses._node_index.__next__()
+        self.Slack_Ii_node = Buses._node_index.__next__()
+        
 
-    # this is a custom function to allow each bus to reference the bus    
-    def assign_buses(self, bus_vec):
-        self.bus = bus_vec[self.bus_id-1]
+    def assign_dual_nodes(self,bus):
+        # You need to implement this
+        self.node_Lr = bus[Buses.bus_key_[self.Bus]].node_Lr
+        self.node_Li = bus[Buses.bus_key_[self.Bus]].node_Li
+        self.Slack_Lr_node = Buses._node_index.__next__()
+        self.Slack_Li_node = Buses._node_index.__next__()
+        pass
 
-        return
-    # You should also add some other class functions you deem necessary for stamping,
-    # initializing, and processing results.
-    def stamp_dense(self, inputY, inputJ):
-        # stamp RE into y
-        inputY[self.bus.node_Vr,self.node_Vr_Slack] += 1
-        inputY[self.node_Vr_Slack,self.bus.node_Vr] += 1
-        # stamp IM into y
-        inputY[self.bus.node_Vi,self.node_Vi_Slack] += 1
-        inputY[self.node_Vi_Slack,self.bus.node_Vi] += 1
-        # stamp RE into J
-        inputJ[self.node_Vr_Slack] += self.Vr_set
-        # stamp IM into J
-        inputJ[self.node_Vi_Slack] += self.Vi_set
+    def stamp(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
+        # slack currents leaving their nodes
+        idx_Y = stampY(self.Vr_node, self.Slack_Ir_node, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vi_node, self.Slack_Ii_node, 1, Y_val, Y_row, Y_col, idx_Y)
+
+        # enforce slack constraints
+        idx_Y = stampY(self.Slack_Ir_node, self.Vr_node, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_J = stampJ(self.Slack_Ir_node, self.Vr_set, J_val, J_row, idx_J)
+
+        idx_Y = stampY(self.Slack_Ii_node, self.Vi_node, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_J = stampJ(self.Slack_Ii_node, self.Vi_set, J_val, J_row, idx_J)
+
+        return (idx_Y, idx_J)
+
+    def stamp_dual(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
+        # You need to implement this.
+        idx_Y = stampY(self.node_Lr, self.Slack_Lr_node, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.node_Li, self.Slack_Li_node, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Slack_Lr_node, self.node_Lr, 1, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Slack_Li_node, self.node_Li, 1, Y_val, Y_row, Y_col, idx_Y)
         
-        return
-    
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val):
-        # stamp RE into y
-        #inputY[self.bus.node_Vr,self.node_Vr_Slack] += 1
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.node_Vr_Slack)
-        inputY_val.append(1)
-        
-        #inputY[self.node_Vr_Slack,self.bus.node_Vr] += 1
-        inputY_r.append(self.node_Vr_Slack)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(1)
-        
-        # stamp IM into y
-        #inputY[self.bus.node_Vi,self.node_Vi_Slack] += 1
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.node_Vi_Slack)
-        inputY_val.append(1)
-        
-        #inputY[self.node_Vi_Slack,self.bus.node_Vi] += 1
-        inputY_r.append(self.node_Vi_Slack)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(1)
-        
-        # stamp RE into J
-        #inputJ[self.node_Vr_Slack] += self.Vr_set
-        inputJ_r.append(self.node_Vr_Slack)
-        inputJ_val.append(self.Vr_set)
-        
-        # stamp IM into J
-        #inputJ[self.node_Vi_Slack] += self.Vi_set
-        inputJ_r.append(self.node_Vi_Slack)
-        inputJ_val.append(self.Vi_set)
-        
-        return inputY_r, inputY_c, inputY_val, inputJ_r, inputJ_val
+        return (idx_Y, idx_J)
+
+    def calc_slack_PQ(self, V_sol):
+        Ir = V_sol[self.Slack_Ir_node]
+        Ii = V_sol[self.Slack_Ii_node]
+        Vr = self.Vr_set
+        Vi = self.Vi_set
+        S = (Vr + 1j*Vi)*(Ir - 1j*Ii)
+        P = -np.real(S)
+        Q = np.imag(S)
+        return (P, Q)
+
+    def calc_residuals(self, resid, V):
+        resid[self.Vr_node] += V[self.Slack_Ir_node]
+        resid[self.Vi_node] += V[self.Slack_Ii_node]
+        resid[self.Slack_Ir_node] += V[self.Vr_node] - self.Vr_set
+        resid[self.Slack_Ii_node] += V[self.Vi_node] - self.Vi_set

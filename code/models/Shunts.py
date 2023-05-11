@@ -1,14 +1,14 @@
 from __future__ import division
 from itertools import count
 from models.Buses import Buses
-from scripts.global_vars import global_vars
-import numpy as np
+from scripts.stamp_helpers import *
+from models.global_vars import global_vars
 
 class Shunts:
     _ids = count(0)
 
     def __init__(self,
-                 Bus_id,
+                 Bus,
                  G_MW,
                  B_MVAR,
                  shunt_type,
@@ -20,7 +20,7 @@ class Shunts:
                  controlBus,
                  flag_control_shunt_bus=False,
                  Nsteps=[0],
-                 Bstep=[0]):
+                 Bsteps=[0]):
 
         """ Initialize a shunt in the power grid.
         Args:
@@ -38,10 +38,9 @@ class Shunts:
             Nsteps (list): the number of steps by which the switched shunt should adjust itself
             Bstep (list): the admittance increase for each step in Nstep as MVar at unity voltage
         """
-        self.id = self._ids.__next__()
-        self.bus_id = Bus_id
-        self.g = G_MW/global_vars.MVAbase
-        self.b = B_MVAR/global_vars.MVAbase
+        self.Bus = Bus
+        self.G_MW = G_MW
+        self.B_MVAR = B_MVAR
         self.shunt_type = shunt_type
         self.Vhi = Vhi
         self.Vlo = Vlo
@@ -50,55 +49,45 @@ class Shunts:
         self.Binit = Binit
         self.controlBus = controlBus
         self.flag_control_shunt_bus = flag_control_shunt_bus
-        self.Nsteps = Nsteps
-        self.Bstep = Bstep
+        self.Nsteps = Nsteps 
+        self.Bsteps= Bsteps
+        self.id = self._ids.__next__()
+        self.G_pu = G_MW/global_vars.base_MVA
+        self.B_pu = B_MVAR/global_vars.base_MVA
 
-        # You will need to implement the remainder of the __init__ function yourself.
-        # You should also add some other class functions you deem necessary for stamping,
-        # initializing, and processing results.
-        
-        # this is a custom function to allow each bus to reference the bus    
-    def assign_buses(self, bus_vec):
-        self.bus = bus_vec[self.bus_id-1]
-            
+    def assign_indexes(self, bus):
+        self.Vr_node = bus[Buses.bus_key_[self.Bus]].node_Vr
+        self.Vi_node = bus[Buses.bus_key_[self.Bus]].node_Vi
+        self.Lr_node = bus[Buses.bus_key_[self.Bus]].node_Lr
+        self.Li_node = bus[Buses.bus_key_[self.Bus]].node_Li
+
+    def stamp(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
+        idx_Y = stampY(self.Vr_node, self.Vr_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vi_node, self.Vi_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vr_node, self.Vi_node,
+                                    -self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Vi_node, self.Vr_node,
+                                    self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        return (idx_Y, idx_J)
+
+    def stamp_dual(self, V, Y_val, Y_row, Y_col, J_val, J_row, idx_Y, idx_J):
+        # You need to implement this.
+        idx_Y = stampY(self.Lr_node, self.Lr_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Li_node, self.Li_node,
+                                    self.G_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Lr_node, self.Li_node,
+                                    -self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        idx_Y = stampY(self.Li_node, self.Lr_node,
+                                    +self.B_pu, Y_val, Y_row, Y_col, idx_Y)
+        return (idx_Y, idx_J)
         pass
+
+    def calc_residuals(self, resid, V):
+        Vr = V[self.Vr_node]
+        Vi = V[self.Vi_node]
         
-    def stamp_dense(self, inputY):
-        # Stamp G RE
-        inputY[self.bus.node_Vr, self.bus.node_Vr] += self.g
-        # Stamp VCCS RE
-        inputY[self.bus.node_Vr, self.bus.node_Vi] += -1*self.b
-        # Stamp G IM
-        inputY[self.bus.node_Vi, self.bus.node_Vi] += self.g
-        # Stamp VCCS IM
-        inputY[self.bus.node_Vi, self.bus.node_Vr] += self.b
-            
-        pass
-    
-    def stamp_sparse(self, inputY_r, inputY_c, inputY_val):
-        # Stamp G RE
-        #inputY[self.bus.node_Vr, self.bus.node_Vr] += self.g
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(self.g)
-        
-        # Stamp VCCS RE
-        #inputY[self.bus.node_Vr, self.bus.node_Vi] += -1*self.b
-        inputY_r.append(self.bus.node_Vr)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(-1*self.b)
-        
-        # Stamp G IM
-        #inputY[self.bus.node_Vi, self.bus.node_Vi] += self.g
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vi)
-        inputY_val.append(self.g)
-        
-        # Stamp VCCS IM
-        #inputY[self.bus.node_Vi, self.bus.node_Vr] += self.b
-        inputY_r.append(self.bus.node_Vi)
-        inputY_c.append(self.bus.node_Vr)
-        inputY_val.append(self.b)
-        
-        
-        return inputY_r, inputY_c, inputY_val
+        resid[self.Vr_node] += -self.B_pu*Vi + self.G_pu*Vr
+        resid[self.Vi_node] += self.B_pu*Vr + self.G_pu*Vi
